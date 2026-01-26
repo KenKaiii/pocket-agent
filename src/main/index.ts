@@ -560,7 +560,12 @@ function setupIPC(): void {
         });
       }
 
-      return { success: true, response: result.response, tokensUsed: result.tokensUsed };
+      return {
+        success: true,
+        response: result.response,
+        tokensUsed: result.tokensUsed,
+        suggestedPrompt: result.suggestedPrompt,
+      };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       return { success: false, error: errorMsg };

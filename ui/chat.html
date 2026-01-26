@@ -527,10 +527,45 @@
       min-height: 24px;
       max-height: 150px;
       line-height: 1.5;
+      position: relative;
+      z-index: 1;
     }
 
     #message-input::placeholder {
       color: var(--text-muted);
+    }
+
+    #message-input.has-suggestion::placeholder {
+      color: transparent;
+    }
+
+    .textarea-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+    }
+
+    #ghost-suggestion {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      line-height: 1.5;
+      color: var(--text-muted);
+      pointer-events: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      opacity: 0.6;
+    }
+
+    #ghost-suggestion .tab-hint {
+      color: var(--accent);
+      opacity: 0.7;
+      font-size: 12px;
+      margin-left: 8px;
     }
 
     #send-btn {
@@ -775,12 +810,16 @@
           <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
         </svg>
       </button>
-      <textarea
-        id="message-input"
-        placeholder="Message Pocket Agent..."
-        rows="1"
-        onkeydown="handleKeydown(event)"
-      ></textarea>
+      <div class="textarea-wrapper">
+        <div id="ghost-suggestion"></div>
+        <textarea
+          id="message-input"
+          placeholder="Message Pocket Agent..."
+          rows="1"
+          onkeydown="handleKeydown(event)"
+          oninput="handleInput(event)"
+        ></textarea>
+      </div>
     </div>
     <button id="send-btn" onclick="handleSendClick()" title="Send message">
       <svg class="send-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -807,6 +846,8 @@
     let pendingAttachments = []; // { file, name, type, size, dataUrl, content }
     let statusCleanup = null;
     let currentStatusEl = null;
+    let currentSuggestion = null; // Stores the suggested prompt from the agent
+    const ghostSuggestion = document.getElementById('ghost-suggestion');
 
     // Allowed file types
     const ALLOWED_EXTENSIONS = new Set([
@@ -1056,6 +1097,7 @@
       setButtonState(true);
       input.value = '';
       input.style.height = 'auto';
+      clearSuggestion();
 
       // Clear attachments
       clearAttachments();
@@ -1090,6 +1132,11 @@
 
         if (result.success) {
           addMessage('assistant', result.response);
+
+          // If there's a suggested prompt, show it as ghost text
+          if (result.suggestedPrompt) {
+            setSuggestion(result.suggestedPrompt);
+          }
         } else {
           addMessage('error', result.error);
         }
@@ -1325,10 +1372,67 @@
     }
 
     function handleKeydown(e) {
+      // Tab: Accept the suggestion and place cursor at end
+      if (e.key === 'Tab' && currentSuggestion && !input.value.trim()) {
+        e.preventDefault();
+        acceptSuggestion();
+        return;
+      }
+
+      // Enter: Send message (or suggestion if no user input)
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        // If there's a suggestion and no user input, send the suggestion
+        if (currentSuggestion && !input.value.trim()) {
+          input.value = currentSuggestion;
+          clearSuggestion();
+        }
         sendMessage();
+        return;
       }
+
+      // Escape: Clear the suggestion
+      if (e.key === 'Escape' && currentSuggestion) {
+        e.preventDefault();
+        clearSuggestion();
+        return;
+      }
+    }
+
+    function handleInput(e) {
+      // When user types, clear the suggestion
+      if (currentSuggestion && input.value.trim()) {
+        clearSuggestion();
+      }
+      autoResizeTextarea();
+    }
+
+    function setSuggestion(text) {
+      if (!text) {
+        clearSuggestion();
+        return;
+      }
+      currentSuggestion = text;
+      ghostSuggestion.innerHTML = escapeHtml(text) + '<span class="tab-hint">Tab to accept</span>';
+      ghostSuggestion.style.display = 'block';
+      input.classList.add('has-suggestion');
+    }
+
+    function clearSuggestion() {
+      currentSuggestion = null;
+      ghostSuggestion.innerHTML = '';
+      ghostSuggestion.style.display = 'none';
+      input.classList.remove('has-suggestion');
+    }
+
+    function acceptSuggestion() {
+      if (!currentSuggestion) return;
+      input.value = currentSuggestion;
+      clearSuggestion();
+      autoResizeTextarea();
+      // Place cursor at the end
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
     }
 
     function triggerAttach() {

@@ -58,6 +58,7 @@ export interface ProcessResult {
   response: string;
   tokensUsed: number;
   wasCompacted: boolean;
+  suggestedPrompt?: string;
 }
 
 /**
@@ -74,6 +75,7 @@ class AgentManagerClass extends EventEmitter {
   private instructions: string = '';
   private currentAbortController: AbortController | null = null;
   private isProcessing: boolean = false;
+  private lastSuggestedPrompt: string | undefined = undefined;
 
   private constructor() {
     super();
@@ -134,6 +136,7 @@ class AgentManagerClass extends EventEmitter {
 
     this.isProcessing = true;
     this.currentAbortController = new AbortController();
+    this.lastSuggestedPrompt = undefined;
     let wasCompacted = false;
 
     try {
@@ -202,6 +205,7 @@ class AgentManagerClass extends EventEmitter {
         response,
         tokensUsed: statsAfter.estimatedTokens,
         wasCompacted,
+        suggestedPrompt: this.lastSuggestedPrompt,
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -509,16 +513,80 @@ pty_exec(command="htop", timeout=30000)
         const textBlocks = content
           .filter((block: any) => block?.type === 'text')
           .map((block: any) => block.text);
-        return textBlocks.join('\n');
+        const text = textBlocks.join('\n');
+        // Extract and strip any trailing "User:" suggested prompts
+        const { text: cleanedText, suggestion } = this.extractSuggestedPrompt(text);
+        if (suggestion) {
+          this.lastSuggestedPrompt = suggestion;
+        }
+        return cleanedText;
       }
     }
 
     if (message.type === 'result') {
-      if (message.output) return message.output;
-      if (message.result) return message.result;
+      const result = message.output || message.result;
+      if (result) {
+        // Extract and strip any trailing "User:" suggested prompts from result
+        const { text: cleanedText, suggestion } = this.extractSuggestedPrompt(result);
+        if (suggestion) {
+          this.lastSuggestedPrompt = suggestion;
+        }
+        return cleanedText;
+      }
     }
 
     return current;
+  }
+
+  /**
+   * Extract and strip trailing suggested user prompts that the SDK might include
+   * These appear as "User: ..." at the end of responses
+   * Returns both the cleaned text and the extracted suggestion
+   */
+  private extractSuggestedPrompt(text: string): { text: string; suggestion?: string } {
+    if (!text) return { text };
+
+    // Pattern: newlines followed by "User:" (case-insensitive) and any text until end
+    const match = text.match(/\n\nuser:\s*(.+)$/is);
+
+    if (match) {
+      const suggestion = match[1].trim();
+      const cleanedText = text.replace(/\n\nuser:[\s\S]*$/is, '').trim();
+
+      // Validate that the suggestion looks like a user prompt, not an assistant question
+      const isValidUserPrompt = this.isValidUserPrompt(suggestion);
+
+      if (isValidUserPrompt) {
+        console.log('[AgentManager] Extracted suggested prompt:', suggestion);
+        return { text: cleanedText, suggestion };
+      } else {
+        console.log('[AgentManager] Rejected invalid suggestion (assistant-style):', suggestion);
+        return { text: cleanedText }; // Strip but don't use as suggestion
+      }
+    }
+
+    return { text: text.trim() };
+  }
+
+  /**
+   * Check if a suggestion looks like a valid user prompt
+   * Rejects questions and assistant-style speech
+   */
+  private isValidUserPrompt(suggestion: string): boolean {
+    if (!suggestion) return false;
+
+    // Reject if it ends with a question mark (assistant asking a question)
+    if (suggestion.endsWith('?')) return false;
+
+    // Reject if it starts with common question/assistant words
+    const assistantPatterns = /^(what|how|would|do|does|is|are|can|could|shall|should|may|might|let me|i can|i'll|i will|here's|here is)/i;
+    if (assistantPatterns.test(suggestion)) return false;
+
+    // Reject if it's too long (likely not a simple user command)
+    if (suggestion.length > 100) return false;
+
+    // Accept short, command-like suggestions
+    return true;
   }
 
   private emitStatus(status: AgentStatus): void {
