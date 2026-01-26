@@ -648,7 +648,7 @@ class SettingsManagerClass {
     }
   }
 
-  async validateTelegramToken(token: string): Promise<{ valid: boolean; error?: string; botInfo?: any }> {
+  async validateTelegramToken(token: string): Promise<{ valid: boolean; error?: string; botInfo?: unknown }> {
     try {
       const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
       const data = await response.json();
@@ -666,9 +666,9 @@ class SettingsManagerClass {
   /**
    * Export settings for backup (excluding encrypted values)
    */
-  exportSettings(): Record<string, any> {
+  exportSettings(): Record<string, unknown> {
     const all = this.getAll();
-    const result: Record<string, any> = {};
+    const result: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(all)) {
       const def = SETTINGS_SCHEMA.find(s => s.key === key);

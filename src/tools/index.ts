@@ -9,6 +9,7 @@
  * Custom tools use SDK MCP servers (in-process) via createSdkMcpServer()
  */
 
+import { execSync } from 'child_process';
 import { getBrowserToolDefinition, handleBrowserTool } from '../browser';
 import { getMemoryTools } from './memory-tools';
 import { getSchedulerTools } from './scheduler-tools';
@@ -415,7 +416,7 @@ export function validateToolsConfig(config: ToolsConfig): { valid: boolean; erro
   if (config.computerUse.enabled && config.computerUse.dockerized) {
     // Check if Docker is available
     try {
-      require('child_process').execSync('docker --version', { stdio: 'ignore' });
+      execSync('docker --version', { stdio: 'ignore' });
     } catch {
       errors.push('Docker not available (required for safe computer use)');
     }

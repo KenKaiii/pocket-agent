@@ -6,7 +6,6 @@ import {
   cosineSimilarity,
   serializeEmbedding,
   deserializeEmbedding,
-  EMBEDDING_DIMENSIONS,
 } from './embeddings';
 
 // Types
@@ -239,7 +238,7 @@ export class MemoryManager {
           VALUES (new.id, new.category, new.subject, new.content);
         END;
       `);
-    } catch (e) {
+    } catch {
       // FTS5 triggers may already exist
     }
 

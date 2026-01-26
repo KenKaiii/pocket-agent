@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   send: (message: string) => ipcRenderer.invoke('agent:send', message),
   stop: () => ipcRenderer.invoke('agent:stop'),
   onStatus: (callback: (status: { type: string; toolName?: string; toolInput?: string; message?: string }) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, status: any) => callback(status);
+    const listener = (_event: Electron.IpcRendererEvent, status: { type: string; toolName?: string; toolInput?: string; message?: string }) => callback(status);
     ipcRenderer.on('agent:status', listener);
     // Return cleanup function
     return () => ipcRenderer.removeListener('agent:status', listener);
@@ -125,7 +125,7 @@ declare global {
       isFirstRun: () => Promise<boolean>;
       validateAnthropicKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
       validateOpenAIKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
-      validateTelegramToken: (token: string) => Promise<{ valid: boolean; error?: string; botInfo?: any }>;
+      validateTelegramToken: (token: string) => Promise<{ valid: boolean; error?: string; botInfo?: unknown }>;
       restartAgent: () => Promise<{ success: boolean }>;
       openSettings: () => Promise<void>;
       openChat: () => Promise<void>;

@@ -20,7 +20,7 @@ export type AgentStatus = {
 };
 
 // SDK types (loaded dynamically)
-type SDKQuery = AsyncGenerator<any, void>;
+type SDKQuery = AsyncGenerator<unknown, void>;
 type SDKOptions = {
   model?: string;
   cwd?: string;
@@ -30,18 +30,18 @@ type SDKOptions = {
   allowedTools?: string[];
   persistSession?: boolean;
   systemPrompt?: string | { type: 'preset'; preset: 'claude_code'; append?: string };
-  mcpServers?: Record<string, any>;
+  mcpServers?: Record<string, unknown>;
 };
 
 // Dynamic SDK loader
 let sdkQuery: ((params: { prompt: string; options?: SDKOptions }) => SDKQuery) | null = null;
 
 // Use Function to preserve native import() - TypeScript converts import() to require() in CommonJS
-const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<unknown>;
 
 async function loadSDK(): Promise<typeof sdkQuery> {
   if (!sdkQuery) {
-    const sdk = await dynamicImport('@anthropic-ai/claude-agent-sdk');
+    const sdk = await dynamicImport('@anthropic-ai/claude-agent-sdk') as { query: typeof sdkQuery };
     sdkQuery = sdk.query;
   }
   return sdkQuery;
@@ -506,13 +506,14 @@ pty_exec(command="htop", timeout=30000)
 - For full desktop automation, user needs to enable Computer Use (Docker-based)`;
   }
 
-  private extractFromMessage(message: any, current: string): string {
-    if (message.type === 'assistant') {
-      const content = message.message?.content;
+  private extractFromMessage(message: unknown, current: string): string {
+    const msg = message as { type?: string; message?: { content?: unknown }; output?: string; result?: string };
+    if (msg.type === 'assistant') {
+      const content = msg.message?.content;
       if (Array.isArray(content)) {
         const textBlocks = content
-          .filter((block: any) => block?.type === 'text')
-          .map((block: any) => block.text);
+          .filter((block: unknown) => (block as { type?: string })?.type === 'text')
+          .map((block: unknown) => (block as { text: string }).text);
         const text = textBlocks.join('\n');
         // Extract and strip any trailing "User:" suggested prompts
         const { text: cleanedText, suggestion } = this.extractSuggestedPrompt(text);
@@ -523,8 +524,8 @@ pty_exec(command="htop", timeout=30000)
       }
     }
 
-    if (message.type === 'result') {
-      const result = message.output || message.result;
+    if (msg.type === 'result') {
+      const result = msg.output || msg.result;
       if (result) {
         // Extract and strip any trailing "User:" suggested prompts from result
         const { text: cleanedText, suggestion } = this.extractSuggestedPrompt(result);
@@ -593,10 +594,11 @@ pty_exec(command="htop", timeout=30000)
     this.emit('status', status);
   }
 
-  private processStatusFromMessage(message: any): void {
+  private processStatusFromMessage(message: unknown): void {
     // Handle tool use from assistant messages
-    if (message.type === 'assistant') {
-      const content = message.message?.content;
+    const msg = message as { type?: string; subtype?: string; message?: { content?: unknown } };
+    if (msg.type === 'assistant') {
+      const content = msg.message?.content;
       if (Array.isArray(content)) {
         for (const block of content) {
           if (block?.type === 'tool_use') {
@@ -614,8 +616,8 @@ pty_exec(command="htop", timeout=30000)
     }
 
     // Handle tool results
-    if (message.type === 'user' && message.message?.content) {
-      const content = message.message.content;
+    if (msg.type === 'user' && msg.message?.content) {
+      const content = msg.message.content;
       if (Array.isArray(content)) {
         for (const block of content) {
           if (block?.type === 'tool_result') {
@@ -629,8 +631,8 @@ pty_exec(command="htop", timeout=30000)
     }
 
     // Handle system messages
-    if (message.type === 'system') {
-      if (message.subtype === 'init') {
+    if (msg.type === 'system') {
+      if (msg.subtype === 'init') {
         this.emitStatus({ type: 'thinking', message: 'Initializing...' });
       }
     }
@@ -675,49 +677,50 @@ pty_exec(command="htop", timeout=30000)
     return friendlyNames[name] || name;
   }
 
-  private formatToolInput(input: any): string {
+  private formatToolInput(input: unknown): string {
     if (!input) return '';
     // Extract meaningful info from tool input
     if (typeof input === 'string') return input.slice(0, 100);
+    const inp = input as Record<string, string | number[] | undefined>;
 
     // File operations
-    if (input.file_path) return input.file_path;
-    if (input.notebook_path) return input.notebook_path;
+    if (inp.file_path) return inp.file_path as string;
+    if (inp.notebook_path) return inp.notebook_path as string;
 
     // Search/patterns
-    if (input.pattern) return input.pattern;
-    if (input.query) return input.query;
+    if (inp.pattern) return inp.pattern as string;
+    if (inp.query) return inp.query as string;
 
     // Commands
-    if (input.command) return input.command.slice(0, 80);
+    if (inp.command) return (inp.command as string).slice(0, 80);
 
     // Web
-    if (input.url) return input.url;
+    if (inp.url) return inp.url as string;
 
     // Agent/Task
-    if (input.prompt) return input.prompt.slice(0, 80);
-    if (input.description) return input.description.slice(0, 80);
+    if (inp.prompt) return (inp.prompt as string).slice(0, 80);
+    if (inp.description) return (inp.description as string).slice(0, 80);
 
     // Memory tools
-    if (input.category && input.subject) return `${input.category}/${input.subject}`;
-    if (input.content) return input.content.slice(0, 80);
+    if (inp.category && inp.subject) return `${inp.category}/${inp.subject}`;
+    if (inp.content) return (inp.content as string).slice(0, 80);
 
     // Browser tool
-    if (input.action) {
+    if (inp.action) {
       const browserActions: Record<string, string> = {
-        navigate: input.url ? `→ ${input.url}` : 'navigating',
+        navigate: inp.url ? `→ ${inp.url}` : 'navigating',
         screenshot: 'capturing screen',
-        click: input.selector ? `clicking ${input.selector}` : 'clicking',
-        type: input.text ? `typing "${input.text.slice(0, 30)}"` : 'typing',
+        click: inp.selector ? `clicking ${inp.selector}` : 'clicking',
+        type: inp.text ? `typing "${(inp.text as string).slice(0, 30)}"` : 'typing',
         evaluate: 'running script',
-        extract: input.extract_type || 'extracting data',
+        extract: (inp.extract_type as string) || 'extracting data',
       };
-      return browserActions[input.action] || input.action;
+      return browserActions[inp.action as string] || (inp.action as string);
     }
 
     // Computer use
-    if (input.coordinate) return `at (${input.coordinate[0]}, ${input.coordinate[1]})`;
-    if (input.text) return `"${input.text.slice(0, 40)}"`;
+    if (inp.coordinate) return `at (${(inp.coordinate as number[])[0]}, ${(inp.coordinate as number[])[1]})`;
+    if (inp.text) return `"${(inp.text as string).slice(0, 40)}"`;
 
     return '';
   }
@@ -805,7 +808,7 @@ ${conversationText}`;
       for (const line of lines) {
         const parts = line.split('|');
         if (parts.length >= 4) {
-          const [_, category, subject, ...contentParts] = parts;
+          const [, category, subject, ...contentParts] = parts;
           const content = contentParts.join('|').trim();
 
           if (category && subject && content) {

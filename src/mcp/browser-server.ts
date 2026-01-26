@@ -109,7 +109,7 @@ async function connectBrowser(): Promise<Browser> {
     });
     console.error('[Browser] Connected to Chrome CDP');
     return browser;
-  } catch (error) {
+  } catch {
     throw new Error(
       `Cannot connect to Chrome. Start Chrome with:\n` +
         `/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222`

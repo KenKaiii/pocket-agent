@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { AgentManager } from '../agent';
 import { MemoryManager } from '../memory';
-import { createScheduler, getScheduler, CronScheduler } from '../scheduler';
+import { createScheduler, CronScheduler } from '../scheduler';
 import { createTelegramBot, getTelegramBot, TelegramBot } from '../channels/telegram';
 import { SettingsManager } from '../settings';
 import { loadIdentity, saveIdentity, getIdentityPath } from '../config/identity';
