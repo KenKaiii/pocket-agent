@@ -4,6 +4,7 @@ import { buildMCPServers, buildSdkMcpServers, setMemoryManager, ToolsConfig, val
 import { closeBrowserManager } from '../browser';
 import { loadIdentity } from '../config/identity';
 import { loadInstructions } from '../config/instructions';
+import { SettingsManager } from '../settings';
 import { EventEmitter } from 'events';
 
 // Token limits
@@ -247,6 +248,12 @@ class AgentManagerClass extends EventEmitter {
 
     if (this.identity) {
       appendParts.push(this.identity);
+    }
+
+    // Add user profile from settings
+    const userProfile = SettingsManager.getFormattedProfile();
+    if (userProfile) {
+      appendParts.push(userProfile);
     }
 
     if (factsContext) {

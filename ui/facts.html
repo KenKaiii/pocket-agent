@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+  <title>Stored Facts - Pocket Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #141415;
+      --bg-tertiary: #1c1c1e;
+      --border: #2a2a2d;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1a6;
+      --text-muted: #636366;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --error: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: var(--bg-secondary);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .fact-count {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 10px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .header-actions button {
+      padding: 6px 14px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .header-actions button:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .content::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    .facts-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .facts-table th,
+    .facts-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .facts-table th {
+      background: var(--bg-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .facts-table td {
+      font-size: 13px;
+      vertical-align: top;
+    }
+
+    .facts-table tbody tr {
+      transition: background 0.1s ease;
+    }
+
+    .facts-table tbody tr:hover {
+      background: var(--bg-secondary);
+    }
+
+    .facts-table .category {
+      color: var(--accent);
+      font-weight: 500;
+      white-space: nowrap;
+      width: 100px;
+    }
+
+    .facts-table .subject {
+      font-weight: 500;
+      white-space: nowrap;
+      width: 140px;
+    }
+
+    .facts-table .content-cell {
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .facts-table .actions {
+      width: 50px;
+      text-align: center;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .delete-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 40px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    .empty-state .hint {
+      font-size: 12px;
+      margin-top: 8px;
+      opacity: 0.7;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--text-primary);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      border-color: var(--success);
+    }
+
+    .toast.error {
+      border-color: var(--error);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display: flex; align-items: center;">
+      <h1>Stored Facts</h1>
+      <span class="fact-count" id="fact-count"></span>
+    </div>
+    <div class="header-actions">
+      <button onclick="loadFacts()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="content" id="content">
+    <!-- Table will be inserted here -->
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    async function loadFacts() {
+      try {
+        const facts = await window.pocketAgent.listFacts();
+        const content = document.getElementById('content');
+        const countEl = document.getElementById('fact-count');
+
+        countEl.textContent = `(${facts.length})`;
+
+        if (facts.length === 0) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <p>No facts stored yet</p>
+              <p class="hint">I learn facts when you tell me things about yourself.</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Sort facts by category then subject
+        facts.sort((a, b) => a.category.localeCompare(b.category) || a.subject.localeCompare(b.subject));
+
+        content.innerHTML = `
+          <table class="facts-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Subject</th>
+                <th>Content</th>
+                <th class="actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${facts.map(f => `
+                <tr data-id="${f.id}">
+                  <td class="category">${escapeHtml(f.category)}</td>
+                  <td class="subject">${escapeHtml(f.subject)}</td>
+                  <td class="content-cell">${escapeHtml(f.content)}</td>
+                  <td class="actions">
+                    <button class="delete-btn" onclick="deleteFact(${f.id})" title="Delete fact">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (error) {
+        console.error('Error loading facts:', error);
+        showToast('Failed to load facts', 'error');
+      }
+    }
+
+    async function deleteFact(id) {
+      if (!confirm('Delete this fact?')) return;
+
+      try {
+        const result = await window.pocketAgent.deleteFact(id);
+        if (result.success) {
+          // Remove row from table
+          const row = document.querySelector(`tr[data-id="${id}"]`);
+          if (row) {
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(-10px)';
+            row.style.transition = 'all 0.2s ease';
+            setTimeout(() => {
+              row.remove();
+
+              // Update count
+              const countEl = document.getElementById('fact-count');
+              const match = countEl.textContent.match(/\d+/);
+              const currentCount = match ? parseInt(match[0]) : 0;
+              countEl.textContent = `(${currentCount - 1})`;
+
+              // If no facts left, reload to show empty state
+              if (currentCount - 1 === 0) {
+                loadFacts();
+              }
+            }, 200);
+          }
+          showToast('Fact deleted', 'success');
+        } else {
+          showToast('Failed to delete fact', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting fact:', error);
+        showToast('Failed to delete fact', 'error');
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // Initialize
+    loadFacts();
+  </script>
+</body>
+</html>

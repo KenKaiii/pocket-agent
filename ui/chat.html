@@ -753,6 +753,13 @@
       </svg>
       Graph
     </button>
+    <button onclick="openCustomize()" title="Customize Agent">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+      Customize
+    </button>
     <div style="flex: 1;"></div>
     <button onclick="openSettings()" title="Settings">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1167,29 +1174,9 @@
 
     async function showFacts() {
       try {
-        const facts = await window.pocketAgent.listFacts();
-        if (facts.length === 0) {
-          addMessage('system', 'No facts stored yet. I learn facts when you tell me things about yourself.');
-        } else {
-          const grouped = {};
-          for (const fact of facts) {
-            if (!grouped[fact.category]) grouped[fact.category] = [];
-            grouped[fact.category].push(fact);
-          }
-
-          let text = `📚 Stored Facts (${facts.length})\n\n`;
-          for (const [category, categoryFacts] of Object.entries(grouped)) {
-            text += `${category.toUpperCase()}\n`;
-            for (const f of categoryFacts) {
-              text += `  • ${f.subject}: ${f.content}\n`;
-            }
-            text += '\n';
-          }
-          addMessage('system', text.trim());
-        }
-        scrollToBottom();
+        await window.pocketAgent.openFacts();
       } catch (err) {
-        addMessage('error', err.message);
+        console.error('Failed to open facts:', err);
       }
     }
 
@@ -1512,6 +1499,14 @@
         await window.pocketAgent.openFactsGraph();
       } catch (err) {
         console.error('Failed to open facts graph:', err);
+      }
+    }
+
+    async function openCustomize() {
+      try {
+        await window.pocketAgent.openCustomize();
+      } catch (err) {
+        console.error('Failed to open customize:', err);
       }
     }
   </script>

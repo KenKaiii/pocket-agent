@@ -23,7 +23,7 @@ export interface SettingDefinition {
   category: string;
   label: string;
   description?: string;
-  type: 'string' | 'number' | 'boolean' | 'password' | 'array';
+  type: 'string' | 'number' | 'boolean' | 'password' | 'array' | 'textarea';
   validation?: (value: string) => boolean;
 }
 
@@ -239,6 +239,62 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     label: 'Enable Scheduler',
     description: 'Enable cron job scheduler',
     type: 'boolean',
+  },
+
+  // User Profile settings
+  {
+    key: 'profile.name',
+    defaultValue: '',
+    encrypted: false,
+    category: 'profile',
+    label: 'Your Name',
+    description: 'Your name for the agent to use',
+    type: 'string',
+  },
+  {
+    key: 'profile.location',
+    defaultValue: '',
+    encrypted: false,
+    category: 'profile',
+    label: 'Location',
+    description: 'Your city/region for context',
+    type: 'string',
+  },
+  {
+    key: 'profile.timezone',
+    defaultValue: '',
+    encrypted: false,
+    category: 'profile',
+    label: 'Timezone',
+    description: 'Your timezone (e.g., America/New_York)',
+    type: 'string',
+  },
+  {
+    key: 'profile.occupation',
+    defaultValue: '',
+    encrypted: false,
+    category: 'profile',
+    label: 'Occupation',
+    description: 'Your job or role',
+    type: 'string',
+  },
+  {
+    key: 'profile.birthday',
+    defaultValue: '',
+    encrypted: false,
+    category: 'profile',
+    label: 'Birthday',
+    description: 'Your birthday (e.g., March 15)',
+    type: 'string',
+  },
+  {
+    key: 'profile.custom',
+    defaultValue: '',
+    encrypted: false,
+    category: 'profile',
+    label: 'Additional Info',
+    description: 'Any other information about yourself',
+    type: 'textarea',
   },
 ];
 
@@ -508,6 +564,38 @@ class SettingsManagerClass {
    */
   isFirstRun(): boolean {
     return !this.hasRequiredKeys();
+  }
+
+  /**
+   * Get formatted user profile for agent context
+   */
+  getFormattedProfile(): string {
+    const name = this.get('profile.name');
+    const location = this.get('profile.location');
+    const timezone = this.get('profile.timezone');
+    const occupation = this.get('profile.occupation');
+    const birthday = this.get('profile.birthday');
+    const custom = this.get('profile.custom');
+
+    // If no profile data, return empty string
+    if (!name && !location && !timezone && !occupation && !birthday && !custom) {
+      return '';
+    }
+
+    const lines: string[] = ['## User Profile'];
+
+    if (name) lines.push(`- **Name:** ${name}`);
+    if (location) lines.push(`- **Location:** ${location}`);
+    if (timezone) lines.push(`- **Timezone:** ${timezone}`);
+    if (occupation) lines.push(`- **Occupation:** ${occupation}`);
+    if (birthday) lines.push(`- **Birthday:** ${birthday}`);
+    if (custom) {
+      lines.push('');
+      lines.push('### Additional Information');
+      lines.push(custom);
+    }
+
+    return lines.join('\n');
   }
 
   /**

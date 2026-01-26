@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+  <title>Customize Agent - Pocket Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #141415;
+      --bg-tertiary: #1c1c1e;
+      --border: #2a2a2d;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1a6;
+      --text-muted: #636366;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --error: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --orange: #f97316;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: var(--bg-secondary);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .header-actions button {
+      padding: 6px 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .header-actions button:hover {
+      background: var(--accent-hover);
+    }
+
+    .header-actions button.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .header-actions button.secondary:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .header-actions button.warning {
+      background: var(--orange);
+    }
+
+    .header-actions button.warning:hover {
+      background: #ea580c;
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 180px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      flex-shrink: 0;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border-left-color: var(--accent);
+    }
+
+    .nav-item svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+    }
+
+    /* Content */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 24px;
+    }
+
+    .tab-content {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .section-header {
+      margin-bottom: 16px;
+    }
+
+    .section-header h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .section-header p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .editor-toolbar .file-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .editor-toolbar .status {
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .editor-toolbar .status.saved {
+      color: var(--success);
+    }
+
+    .editor-toolbar .status.modified {
+      color: var(--warning);
+    }
+
+    .editor-toolbar .status.saving {
+      color: var(--text-muted);
+    }
+
+    textarea.editor {
+      flex: 1;
+      width: 100%;
+      padding: 16px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+
+    textarea.editor::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    textarea.editor::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+
+    textarea.editor::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    textarea.editor::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    .action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .action-bar .info {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .action-bar .buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-bar button {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    .action-bar button:hover {
+      background: var(--accent-hover);
+    }
+
+    .action-bar button.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .action-bar button.secondary:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .action-bar button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Form fields for profile */
+    .form-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-group textarea {
+      min-height: 120px;
+      resize: vertical;
+      font-family: 'Sora', sans-serif;
+      line-height: 1.5;
+    }
+
+    .form-group .hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .form-group select {
+      padding: 10px 36px 10px 12px;
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+      width: 100%;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+    }
+
+    .form-group select:focus {
+      border-color: var(--accent);
+    }
+
+    .form-group select option {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .autocomplete-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .autocomplete-wrapper input {
+      width: 100%;
+    }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+
+    .autocomplete-dropdown.show {
+      display: block;
+    }
+
+    .autocomplete-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s ease;
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .autocomplete-item .city {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .autocomplete-item .details {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .birthday-picker {
+      display: flex;
+      gap: 8px;
+    }
+
+    .birthday-picker select {
+      flex: 1;
+    }
+
+    .birthday-picker select:first-child {
+      flex: 1.5;
+    }
+
+    .profile-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .profile-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .profile-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .profile-content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--text-primary);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      border-color: var(--success);
+    }
+
+    .toast.error {
+      border-color: var(--error);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Customize Agent</h1>
+    <div class="header-actions">
+      <button class="secondary" onclick="window.close()">Close</button>
+      <button class="warning" onclick="restartAgent()" title="Restart to apply changes">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+          <path d="M21 2v6h-6"/>
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+          <path d="M3 22v-6h6"/>
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+        </svg>
+        Restart Agent
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+    <nav class="sidebar">
+      <div class="nav-item active" data-tab="identity">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Identity
+      </div>
+      <div class="nav-item" data-tab="instructions">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        Instructions
+      </div>
+      <div class="nav-item" data-tab="profile">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Your Profile
+      </div>
+    </nav>
+
+    <main class="content">
+      <!-- Identity Tab -->
+      <div class="tab-content active" id="tab-identity">
+        <div class="section-header">
+          <h2>Agent Identity</h2>
+          <p>Define the agent's personality and information about yourself</p>
+        </div>
+        <div class="editor-container">
+          <div class="editor-toolbar">
+            <span class="file-path">~/.my-assistant/identity.md</span>
+            <span class="status saved" id="identity-status">Saved</span>
+          </div>
+          <textarea class="editor" id="identity-editor" placeholder="Loading..."></textarea>
+        </div>
+        <div class="action-bar">
+          <span class="info">Changes require agent restart to take effect</span>
+          <div class="buttons">
+            <button class="secondary" onclick="reloadIdentity()">Revert</button>
+            <button onclick="saveIdentity()" id="save-identity-btn">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instructions Tab -->
+      <div class="tab-content" id="tab-instructions">
+        <div class="section-header">
+          <h2>Agent Instructions</h2>
+          <p>Configure available tools and behavior guidelines</p>
+        </div>
+        <div class="editor-container">
+          <div class="editor-toolbar">
+            <span class="file-path">~/.my-assistant/CLAUDE.md</span>
+            <span class="status saved" id="instructions-status">Saved</span>
+          </div>
+          <textarea class="editor" id="instructions-editor" placeholder="Loading..."></textarea>
+        </div>
+        <div class="action-bar">
+          <span class="info">Changes require agent restart to take effect</span>
+          <div class="buttons">
+            <button class="secondary" onclick="reloadInstructions()">Revert</button>
+            <button onclick="saveInstructions()" id="save-instructions-btn">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Tab -->
+      <div class="tab-content" id="tab-profile">
+        <div class="section-header">
+          <h2>Your Profile</h2>
+          <p>Tell the agent about yourself so it can personalize responses</p>
+        </div>
+        <div class="profile-content">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="profile-name">Your Name</label>
+                <input type="text" id="profile-name" placeholder="e.g., John Smith">
+              </div>
+              <div class="form-group">
+                <label for="profile-occupation">Occupation</label>
+                <input type="text" id="profile-occupation" placeholder="e.g., Software Engineer">
+              </div>
+              <div class="form-group">
+                <label for="profile-location">Location</label>
+                <div class="autocomplete-wrapper">
+                  <input type="text" id="profile-location" placeholder="Start typing a city..." autocomplete="off">
+                  <div class="autocomplete-dropdown" id="location-dropdown"></div>
+                </div>
+                <span class="hint">Type a city name to search</span>
+              </div>
+              <div class="form-group">
+                <label for="profile-timezone">Timezone</label>
+                <select id="profile-timezone">
+                  <option value="">Select timezone...</option>
+                </select>
+                <span class="hint">Auto-filled when you select a location</span>
+              </div>
+              <div class="form-group">
+                <label>Birthday</label>
+                <div class="birthday-picker">
+                  <select id="profile-birthday-month">
+                    <option value="">Month</option>
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
+                  </select>
+                  <select id="profile-birthday-day">
+                    <option value="">Day</option>
+                  </select>
+                </div>
+                <span class="hint">The agent will send you birthday wishes!</span>
+              </div>
+              <div class="form-group full-width">
+                <label for="profile-custom">About You</label>
+                <textarea id="profile-custom" placeholder="What should the agent know about you?&#10;&#10;Examples:&#10;- I have a golden retriever named Max&#10;- I'm learning to play guitar&#10;- My partner's name is Sarah&#10;- I'm vegetarian&#10;- My favorite coffee is oat milk latte"></textarea>
+                <span class="hint">Personal facts, interests, preferences - not how the AI should behave</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="action-bar">
+          <span class="info" id="profile-status">Profile changes save automatically</span>
+          <div class="buttons">
+            <button onclick="saveProfile()">Save Profile</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Track original content for detecting changes
+    let originalIdentity = '';
+    let originalInstructions = '';
+
+    // Tab navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const tab = item.dataset.tab;
+
+        // Update nav
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+      });
+    });
+
+    // Track changes
+    document.getElementById('identity-editor').addEventListener('input', () => {
+      const current = document.getElementById('identity-editor').value;
+      const status = document.getElementById('identity-status');
+      if (current !== originalIdentity) {
+        status.textContent = 'Modified';
+        status.className = 'status modified';
+      } else {
+        status.textContent = 'Saved';
+        status.className = 'status saved';
+      }
+    });
+
+    document.getElementById('instructions-editor').addEventListener('input', () => {
+      const current = document.getElementById('instructions-editor').value;
+      const status = document.getElementById('instructions-status');
+      if (current !== originalInstructions) {
+        status.textContent = 'Modified';
+        status.className = 'status modified';
+      } else {
+        status.textContent = 'Saved';
+        status.className = 'status saved';
+      }
+    });
+
+    // Load content
+    async function loadIdentity() {
+      try {
+        const content = await window.pocketAgent.getIdentity();
+        originalIdentity = content;
+        document.getElementById('identity-editor').value = content;
+        document.getElementById('identity-status').textContent = 'Saved';
+        document.getElementById('identity-status').className = 'status saved';
+      } catch (error) {
+        showToast('Failed to load identity', 'error');
+        console.error('Error loading identity:', error);
+      }
+    }
+
+    async function loadInstructions() {
+      try {
+        const content = await window.pocketAgent.getInstructions();
+        originalInstructions = content;
+        document.getElementById('instructions-editor').value = content;
+        document.getElementById('instructions-status').textContent = 'Saved';
+        document.getElementById('instructions-status').className = 'status saved';
+      } catch (error) {
+        showToast('Failed to load instructions', 'error');
+        console.error('Error loading instructions:', error);
+      }
+    }
+
+    async function reloadIdentity() {
+      await loadIdentity();
+      showToast('Identity reverted', 'success');
+    }
+
+    async function reloadInstructions() {
+      await loadInstructions();
+      showToast('Instructions reverted', 'success');
+    }
+
+    // Save content
+    async function saveIdentity() {
+      const content = document.getElementById('identity-editor').value;
+      const status = document.getElementById('identity-status');
+
+      status.textContent = 'Saving...';
+      status.className = 'status saving';
+
+      try {
+        const result = await window.pocketAgent.saveIdentity(content);
+        if (result.success) {
+          originalIdentity = content;
+          status.textContent = 'Saved';
+          status.className = 'status saved';
+          showToast('Identity saved. Restart agent to apply.', 'success');
+        } else {
+          status.textContent = 'Error';
+          status.className = 'status modified';
+          showToast('Failed to save identity', 'error');
+        }
+      } catch (error) {
+        status.textContent = 'Error';
+        status.className = 'status modified';
+        showToast('Failed to save identity', 'error');
+        console.error('Error saving identity:', error);
+      }
+    }
+
+    async function saveInstructions() {
+      const content = document.getElementById('instructions-editor').value;
+      const status = document.getElementById('instructions-status');
+
+      status.textContent = 'Saving...';
+      status.className = 'status saving';
+
+      try {
+        const result = await window.pocketAgent.saveInstructions(content);
+        if (result.success) {
+          originalInstructions = content;
+          status.textContent = 'Saved';
+          status.className = 'status saved';
+          showToast('Instructions saved. Restart agent to apply.', 'success');
+        } else {
+          status.textContent = 'Error';
+          status.className = 'status modified';
+          showToast('Failed to save instructions', 'error');
+        }
+      } catch (error) {
+        status.textContent = 'Error';
+        status.className = 'status modified';
+        showToast('Failed to save instructions', 'error');
+        console.error('Error saving instructions:', error);
+      }
+    }
+
+    // Restart agent
+    async function restartAgent() {
+      showToast('Restarting agent...', 'success');
+      try {
+        await window.pocketAgent.restartAgent();
+        showToast('Agent restarted successfully', 'success');
+      } catch (error) {
+        showToast('Failed to restart agent', 'error');
+        console.error('Error restarting agent:', error);
+      }
+    }
+
+    // Profile functions
+    // Note: 'birthday' is handled separately with the picker
+    const profileFields = ['name', 'location', 'timezone', 'occupation', 'custom'];
+    let locationLookupTimeout = null;
+
+    // Populate birthday day dropdown
+    function setupBirthdayPicker() {
+      const daySelect = document.getElementById('profile-birthday-day');
+      for (let i = 1; i <= 31; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i;
+        daySelect.appendChild(option);
+      }
+    }
+
+    async function loadTimezones() {
+      try {
+        const timezones = await window.pocketAgent.getTimezones();
+        const select = document.getElementById('profile-timezone');
+
+        // Group timezones by region
+        const grouped = {};
+        timezones.forEach(tz => {
+          const [region] = tz.split('/');
+          if (!grouped[region]) grouped[region] = [];
+          grouped[region].push(tz);
+        });
+
+        // Add options grouped by region
+        Object.keys(grouped).sort().forEach(region => {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = region;
+          grouped[region].sort().forEach(tz => {
+            const option = document.createElement('option');
+            option.value = tz;
+            option.textContent = tz.replace(/_/g, ' ');
+            optgroup.appendChild(option);
+          });
+          select.appendChild(optgroup);
+        });
+      } catch (error) {
+        console.error('Error loading timezones:', error);
+      }
+    }
+
+    async function loadProfile() {
+      try {
+        // Load regular fields
+        for (const field of profileFields) {
+          const value = await window.pocketAgent.getSetting(`profile.${field}`);
+          const input = document.getElementById(`profile-${field}`);
+          if (input) {
+            input.value = value || '';
+          }
+        }
+
+        // Load birthday specially (parse "March 15" format)
+        const birthday = await window.pocketAgent.getSetting('profile.birthday');
+        if (birthday) {
+          const match = birthday.match(/^([A-Za-z]+)\s+(\d{1,2})$/);
+          if (match) {
+            document.getElementById('profile-birthday-month').value = match[1];
+            document.getElementById('profile-birthday-day').value = match[2];
+          }
+        }
+      } catch (error) {
+        showToast('Failed to load profile', 'error');
+        console.error('Error loading profile:', error);
+      }
+    }
+
+    async function saveProfile() {
+      const status = document.getElementById('profile-status');
+      status.textContent = 'Saving...';
+
+      try {
+        // Save regular fields
+        for (const field of profileFields) {
+          const input = document.getElementById(`profile-${field}`);
+          if (input) {
+            await window.pocketAgent.setSetting(`profile.${field}`, input.value);
+          }
+        }
+
+        // Save birthday from dropdowns (combine into "Month Day" format)
+        const month = document.getElementById('profile-birthday-month').value;
+        const day = document.getElementById('profile-birthday-day').value;
+        const birthday = month && day ? `${month} ${day}` : '';
+        await window.pocketAgent.setSetting('profile.birthday', birthday);
+
+        status.textContent = 'Profile saved! Restart agent to apply.';
+        showToast('Profile saved. Restart agent to apply.', 'success');
+      } catch (error) {
+        status.textContent = 'Failed to save profile';
+        showToast('Failed to save profile', 'error');
+        console.error('Error saving profile:', error);
+      }
+    }
+
+    // Location autocomplete
+    function setupLocationAutocomplete() {
+      const input = document.getElementById('profile-location');
+      const dropdown = document.getElementById('location-dropdown');
+
+      input.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+
+        // Clear previous timeout
+        if (locationLookupTimeout) {
+          clearTimeout(locationLookupTimeout);
+        }
+
+        // Hide dropdown if query is too short
+        if (query.length < 2) {
+          dropdown.classList.remove('show');
+          return;
+        }
+
+        // Debounce the lookup
+        locationLookupTimeout = setTimeout(async () => {
+          try {
+            const results = await window.pocketAgent.lookupLocation(query);
+
+            if (results.length === 0) {
+              dropdown.classList.remove('show');
+              return;
+            }
+
+            // Build dropdown items
+            dropdown.innerHTML = results.map(r => `
+              <div class="autocomplete-item" data-display="${r.display}" data-timezone="${r.timezone}">
+                <div class="city">${r.city}</div>
+                <div class="details">${r.province ? r.province + ', ' : ''}${r.country} - ${r.timezone}</div>
+              </div>
+            `).join('');
+
+            // Add click handlers
+            dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+              item.addEventListener('click', () => {
+                input.value = item.dataset.display;
+                const timezoneSelect = document.getElementById('profile-timezone');
+                timezoneSelect.value = item.dataset.timezone;
+                dropdown.classList.remove('show');
+              });
+            });
+
+            dropdown.classList.add('show');
+          } catch (error) {
+            console.error('Error looking up location:', error);
+          }
+        }, 300);
+      });
+
+      // Hide dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.remove('show');
+        }
+      });
+
+      // Hide dropdown on escape
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          dropdown.classList.remove('show');
+        }
+      });
+    }
+
+    // Toast notifications
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Cmd/Ctrl + S to save current tab
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        const activeTab = document.querySelector('.tab-content.active');
+        if (activeTab.id === 'tab-identity') {
+          saveIdentity();
+        } else if (activeTab.id === 'tab-instructions') {
+          saveInstructions();
+        } else if (activeTab.id === 'tab-profile') {
+          saveProfile();
+        }
+      }
+    });
+
+    // Initialize
+    loadIdentity();
+    loadInstructions();
+    setupBirthdayPicker();
+    loadTimezones().then(() => loadProfile());
+    setupLocationAutocomplete();
+  </script>
+</body>
+</html>

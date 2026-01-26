@@ -6,6 +6,109 @@ import { MemoryManager } from '../memory';
 import { createScheduler, getScheduler, CronScheduler } from '../scheduler';
 import { createTelegramBot, getTelegramBot, TelegramBot } from '../channels/telegram';
 import { SettingsManager } from '../settings';
+import { loadIdentity, saveIdentity, getIdentityPath } from '../config/identity';
+import { loadInstructions, saveInstructions, getInstructionsPath } from '../config/instructions';
+import cityTimezones from 'city-timezones';
+
+// Month name mapping for birthday parsing
+const MONTHS: Record<string, number> = {
+  january: 1, jan: 1,
+  february: 2, feb: 2,
+  march: 3, mar: 3,
+  april: 4, apr: 4,
+  may: 5,
+  june: 6, jun: 6,
+  july: 7, jul: 7,
+  august: 8, aug: 8,
+  september: 9, sep: 9, sept: 9,
+  october: 10, oct: 10,
+  november: 11, nov: 11,
+  december: 12, dec: 12,
+};
+
+/**
+ * Parse a birthday string into month and day
+ * Supports formats like: "March 15", "15 March", "3/15", "03-15", "March 15th"
+ */
+function parseBirthday(birthday: string): { month: number; day: number } | null {
+  if (!birthday || !birthday.trim()) return null;
+
+  const cleaned = birthday.trim().toLowerCase();
+
+  // Try "Month Day" or "Month Dayth/st/nd/rd" format (e.g., "March 15" or "March 15th")
+  const monthDayMatch = cleaned.match(/^([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?$/);
+  if (monthDayMatch) {
+    const month = MONTHS[monthDayMatch[1]];
+    const day = parseInt(monthDayMatch[2], 10);
+    if (month && day >= 1 && day <= 31) {
+      return { month, day };
+    }
+  }
+
+  // Try "Day Month" format (e.g., "15 March" or "15th March")
+  const dayMonthMatch = cleaned.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)$/);
+  if (dayMonthMatch) {
+    const day = parseInt(dayMonthMatch[1], 10);
+    const month = MONTHS[dayMonthMatch[2]];
+    if (month && day >= 1 && day <= 31) {
+      return { month, day };
+    }
+  }
+
+  // Try numeric formats: "3/15", "03/15", "3-15", "03-15"
+  const numericMatch = cleaned.match(/^(\d{1,2})[/-](\d{1,2})$/);
+  if (numericMatch) {
+    const first = parseInt(numericMatch[1], 10);
+    const second = parseInt(numericMatch[2], 10);
+    // Assume MM/DD format (US style)
+    if (first >= 1 && first <= 12 && second >= 1 && second <= 31) {
+      return { month: first, day: second };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Set up birthday cron jobs when birthday is configured
+ */
+async function setupBirthdayCronJobs(birthday: string): Promise<void> {
+  if (!scheduler) return;
+
+  const jobNameMidnight = '_birthday_midnight';
+  const jobNameNoon = '_birthday_noon';
+
+  // Always delete existing birthday jobs first
+  scheduler.deleteJob(jobNameMidnight);
+  scheduler.deleteJob(jobNameNoon);
+
+  const parsed = parseBirthday(birthday);
+  if (!parsed) {
+    console.log('[Birthday] No valid birthday to schedule');
+    return;
+  }
+
+  const { month, day } = parsed;
+  const userName = SettingsManager.get('profile.name') || 'the user';
+
+  // Cron format: minute hour day month day-of-week
+  // Midnight: 0 0 DAY MONTH *
+  // Noon: 0 12 DAY MONTH *
+  const cronMidnight = `0 0 ${day} ${month} *`;
+  const cronNoon = `0 12 ${day} ${month} *`;
+
+  const promptMidnight = `It's ${userName}'s birthday! The clock just struck midnight. Send them a warm, heartfelt birthday message to start their special day. Be genuine and celebratory - this is the first birthday wish of their day!`;
+
+  const promptNoon = `It's ${userName}'s birthday and it's now midday! Send them another wonderful birthday message. Make this one even more special and celebratory than the morning one - wish them an amazing rest of their birthday, mention hoping their day has been great so far, and express how much you appreciate them.`;
+
+  // Create the jobs (channel 'telegram' to send via Telegram if configured)
+  const channel = SettingsManager.get('telegram.defaultChatId') ? 'telegram' : 'desktop';
+
+  await scheduler.createJob(jobNameMidnight, cronMidnight, promptMidnight, channel);
+  await scheduler.createJob(jobNameNoon, cronNoon, promptNoon, channel);
+
+  console.log(`[Birthday] Scheduled birthday reminders for ${month}/${day} (${userName})`);
+}
 
 let tray: Tray | null = null;
 let memory: MemoryManager | null = null;
@@ -16,6 +119,8 @@ let cronWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let setupWindow: BrowserWindow | null = null;
 let factsGraphWindow: BrowserWindow | null = null;
+let customizeWindow: BrowserWindow | null = null;
+let factsWindow: BrowserWindow | null = null;
 
 // ============ Tray Setup ============
 
@@ -362,6 +467,64 @@ function openFactsGraphWindow(): void {
   });
 }
 
+function openCustomizeWindow(): void {
+  if (customizeWindow && !customizeWindow.isDestroyed()) {
+    customizeWindow.focus();
+    return;
+  }
+
+  customizeWindow = new BrowserWindow({
+    width: 800,
+    height: 650,
+    title: 'Customize Agent - Pocket Agent',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    show: false,
+  });
+
+  customizeWindow.loadFile(path.join(__dirname, '../../ui/customize.html'));
+
+  customizeWindow.once('ready-to-show', () => {
+    customizeWindow?.show();
+  });
+
+  customizeWindow.on('closed', () => {
+    customizeWindow = null;
+  });
+}
+
+function openFactsWindow(): void {
+  if (factsWindow && !factsWindow.isDestroyed()) {
+    factsWindow.focus();
+    return;
+  }
+
+  factsWindow = new BrowserWindow({
+    width: 700,
+    height: 550,
+    title: 'Stored Facts - Pocket Agent',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    show: false,
+  });
+
+  factsWindow.loadFile(path.join(__dirname, '../../ui/facts.html'));
+
+  factsWindow.once('ready-to-show', () => {
+    factsWindow?.show();
+  });
+
+  factsWindow.on('closed', () => {
+    factsWindow = null;
+  });
+}
+
 function showNotification(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title, body }).show();
@@ -438,6 +601,12 @@ function setupIPC(): void {
     return memory?.getFactCategories() || [];
   });
 
+  ipcMain.handle('facts:delete', async (_, id: number) => {
+    if (!memory) return { success: false };
+    const success = memory.deleteFact(id);
+    return { success };
+  });
+
   ipcMain.handle('facts:graph-data', async () => {
     if (!memory) return { nodes: [], links: [] };
     return memory.getFactsGraphData();
@@ -445,6 +614,78 @@ function setupIPC(): void {
 
   ipcMain.handle('app:openFactsGraph', async () => {
     openFactsGraphWindow();
+  });
+
+  ipcMain.handle('app:openFacts', async () => {
+    openFactsWindow();
+  });
+
+  ipcMain.handle('app:openCustomize', async () => {
+    openCustomizeWindow();
+  });
+
+  // Customize - Identity
+  ipcMain.handle('customize:getIdentity', async () => {
+    return loadIdentity();
+  });
+
+  ipcMain.handle('customize:saveIdentity', async (_, content: string) => {
+    const success = saveIdentity(content);
+    return { success };
+  });
+
+  ipcMain.handle('customize:getIdentityPath', async () => {
+    return getIdentityPath();
+  });
+
+  // Customize - Instructions
+  ipcMain.handle('customize:getInstructions', async () => {
+    return loadInstructions();
+  });
+
+  ipcMain.handle('customize:saveInstructions', async (_, content: string) => {
+    const success = saveInstructions(content);
+    return { success };
+  });
+
+  ipcMain.handle('customize:getInstructionsPath', async () => {
+    return getInstructionsPath();
+  });
+
+  // Location and timezone lookup
+  ipcMain.handle('location:lookup', async (_, query: string) => {
+    if (!query || query.length < 2) return [];
+
+    const results = cityTimezones.lookupViaCity(query);
+    // Return top 10 results with city, country, and timezone
+    return results.slice(0, 10).map((r: { city: string; country: string; timezone: string; province?: string }) => ({
+      city: r.city,
+      country: r.country,
+      province: r.province || '',
+      timezone: r.timezone,
+      display: r.province ? `${r.city}, ${r.province}, ${r.country}` : `${r.city}, ${r.country}`,
+    }));
+  });
+
+  ipcMain.handle('timezone:list', async () => {
+    // Get all IANA timezones
+    try {
+      const timezones = Intl.supportedValuesOf('timeZone');
+      return timezones;
+    } catch {
+      // Fallback for older environments
+      return [
+        'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+        'America/Toronto', 'America/Vancouver', 'America/Mexico_City', 'America/Sao_Paulo',
+        'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Rome', 'Europe/Madrid',
+        'Europe/Amsterdam', 'Europe/Stockholm', 'Europe/Moscow',
+        'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Seoul',
+        'Asia/Bangkok', 'Asia/Jakarta', 'Asia/Kolkata', 'Asia/Dubai', 'Asia/Jerusalem',
+        'Australia/Sydney', 'Australia/Melbourne', 'Australia/Perth',
+        'Pacific/Auckland', 'Pacific/Honolulu', 'Pacific/Fiji',
+        'Africa/Cairo', 'Africa/Johannesburg', 'Africa/Lagos',
+      ];
+    }
   });
 
   // Cron jobs
@@ -491,6 +732,12 @@ function setupIPC(): void {
   ipcMain.handle('settings:set', async (_, key: string, value: string) => {
     try {
       SettingsManager.set(key, value);
+
+      // Auto-setup birthday cron jobs when birthday is set
+      if (key === 'profile.birthday') {
+        await setupBirthdayCronJobs(value);
+      }
+
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -675,6 +922,12 @@ async function initializeAgent(): Promise<void> {
         }, 1000);
       }
     });
+
+    // Set up birthday reminders if birthday is configured
+    const birthday = SettingsManager.get('profile.birthday');
+    if (birthday) {
+      await setupBirthdayCronJobs(birthday);
+    }
   }
 
   // Initialize Telegram

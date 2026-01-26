@@ -30,8 +30,23 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   listFacts: () => ipcRenderer.invoke('facts:list'),
   searchFacts: (query: string) => ipcRenderer.invoke('facts:search', query),
   getFactCategories: () => ipcRenderer.invoke('facts:categories'),
+  deleteFact: (id: number) => ipcRenderer.invoke('facts:delete', id),
   getGraphData: () => ipcRenderer.invoke('facts:graph-data'),
   openFactsGraph: () => ipcRenderer.invoke('app:openFactsGraph'),
+  openFacts: () => ipcRenderer.invoke('app:openFacts'),
+  openCustomize: () => ipcRenderer.invoke('app:openCustomize'),
+
+  // Customize
+  getIdentity: () => ipcRenderer.invoke('customize:getIdentity'),
+  saveIdentity: (content: string) => ipcRenderer.invoke('customize:saveIdentity', content),
+  getIdentityPath: () => ipcRenderer.invoke('customize:getIdentityPath'),
+  getInstructions: () => ipcRenderer.invoke('customize:getInstructions'),
+  saveInstructions: (content: string) => ipcRenderer.invoke('customize:saveInstructions', content),
+  getInstructionsPath: () => ipcRenderer.invoke('customize:getInstructionsPath'),
+
+  // Location and timezone
+  lookupLocation: (query: string) => ipcRenderer.invoke('location:lookup', query),
+  getTimezones: () => ipcRenderer.invoke('timezone:list'),
 
   // Cron
   getCronJobs: () => ipcRenderer.invoke('cron:list'),
@@ -77,11 +92,24 @@ declare global {
       listFacts: () => Promise<Array<{ id: number; category: string; subject: string; content: string }>>;
       searchFacts: (query: string) => Promise<Array<{ category: string; subject: string; content: string }>>;
       getFactCategories: () => Promise<string[]>;
+      deleteFact: (id: number) => Promise<{ success: boolean }>;
       getGraphData: () => Promise<{
         nodes: Array<{ id: number; subject: string; category: string; content: string; group: number }>;
         links: Array<{ source: number; target: number; type: 'category' | 'semantic' | 'keyword'; strength: number }>;
       }>;
       openFactsGraph: () => Promise<void>;
+      openFacts: () => Promise<void>;
+      openCustomize: () => Promise<void>;
+      // Customize
+      getIdentity: () => Promise<string>;
+      saveIdentity: (content: string) => Promise<{ success: boolean }>;
+      getIdentityPath: () => Promise<string>;
+      getInstructions: () => Promise<string>;
+      saveInstructions: (content: string) => Promise<{ success: boolean }>;
+      getInstructionsPath: () => Promise<string>;
+      // Location and timezone
+      lookupLocation: (query: string) => Promise<Array<{ city: string; country: string; province: string; timezone: string; display: string }>>;
+      getTimezones: () => Promise<string[]>;
       getCronJobs: () => Promise<Array<{ id: number; name: string; schedule: string; prompt: string; channel: string; enabled: boolean }>>;
       createCronJob: (name: string, schedule: string, prompt: string, channel: string) => Promise<{ success: boolean }>;
       deleteCronJob: (name: string) => Promise<{ success: boolean }>;
