@@ -431,17 +431,3 @@ export async function handlePtyExecTool(input: unknown): Promise<string> {
   return JSON.stringify(result);
 }
 
-/**
- * Kill all active PTY sessions (for cleanup)
- */
-export function killAllPtySessions(): void {
-  for (const [id, process] of activeSessions) {
-    try {
-      process.kill('SIGTERM');
-      console.log(`[PTY] Killed session ${id}`);
-    } catch {
-      // Ignore errors on cleanup
-    }
-  }
-  activeSessions.clear();
-}

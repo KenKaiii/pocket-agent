@@ -1282,12 +1282,6 @@
         }
       }
 
-      // Build command with substitutions
-      let command = step.command;
-      for (const [key, value] of Object.entries(setupInputValues)) {
-        command = command.replace(`{{${key}}}`, value);
-      }
-
       // Disable button and show loading
       nextBtn.disabled = true;
       nextBtn.innerHTML = '<span class="spinner-sm"></span>';
@@ -1297,13 +1291,24 @@
         statusDiv.innerHTML = `<span class="spinner-sm"></span><span>Running...</span>`;
       }
 
+      // Build display command for terminal (for user visibility only)
+      let displayCommand = step.command;
+      for (const [key, value] of Object.entries(setupInputValues)) {
+        displayCommand = displayCommand.replace(`{{${key}}}`, value);
+      }
+
       if (terminalDiv) {
         terminalDiv.style.display = 'block';
-        terminalDiv.textContent = `$ ${command}\n`;
+        terminalDiv.textContent = `$ ${displayCommand}\n`;
       }
 
       try {
-        const result = await window.pocketAgent.runSkillSetupCommand(command);
+        // Send structured data to main process (secure - command looked up from manifest)
+        const result = await window.pocketAgent.runSkillSetupCommand({
+          skillName: currentSetup.skillName,
+          stepId: step.id,
+          inputs: setupInputValues
+        });
 
         if (terminalDiv && result.output) {
           terminalDiv.textContent += result.output;

@@ -97,6 +97,10 @@ export class MemoryManager {
   private summarizer?: SummarizerFn;
   private embeddingsReady: boolean = false;
 
+  // Cache for facts context (invalidated on fact changes)
+  private factsContextCache: string | null = null;
+  private factsContextCacheValid: boolean = false;
+
   constructor(dbPath: string) {
     this.db = new Database(dbPath);
     this.initialize();
@@ -383,35 +387,43 @@ export class MemoryManager {
     const reservedTokens = 10000;
     const availableTokens = tokenLimit - reservedTokens;
 
-    const allMessages = this.db.prepare(`
+    // Limit query to reasonable number of messages (avoids loading entire history into memory)
+    // 1000 messages at ~300 tokens each = ~300k tokens, well above our typical limit
+    const MAX_MESSAGES_TO_FETCH = 1000;
+
+    const recentMessagesQuery = this.db.prepare(`
       SELECT id, role, content, timestamp, token_count
       FROM messages
       ORDER BY id DESC
-    `).all() as Message[];
+      LIMIT ?
+    `).all(MAX_MESSAGES_TO_FETCH) as Message[];
 
-    if (allMessages.length === 0) {
+    if (recentMessagesQuery.length === 0) {
       return { messages: [], totalTokens: 0, summarizedCount: 0 };
     }
 
+    // Get total count to know if there are older messages beyond our limit
+    const totalCount = this.getMessageCount();
+
     const recentMessages: Message[] = [];
     let tokenCount = 0;
-    let cutoffIndex = 0;
 
-    for (let i = 0; i < allMessages.length; i++) {
-      const msg = allMessages[i];
+    for (let i = 0; i < recentMessagesQuery.length; i++) {
+      const msg = recentMessagesQuery[i];
       const msgTokens = msg.token_count || estimateTokens(msg.content);
 
       if (tokenCount + msgTokens > availableTokens) {
-        cutoffIndex = i;
         break;
       }
 
       recentMessages.unshift(msg);
       tokenCount += msgTokens;
-      cutoffIndex = i + 1;
     }
 
-    if (cutoffIndex >= allMessages.length) {
+    // Calculate how many messages are older than what we're including
+    const olderMessageCount = totalCount - recentMessages.length;
+
+    if (olderMessageCount <= 0) {
       return {
         messages: recentMessages.map(m => ({ role: m.role, content: m.content })),
         totalTokens: tokenCount,
@@ -425,7 +437,7 @@ export class MemoryManager {
     const contextMessages: Array<{ role: string; content: string }> = [];
 
     if (summary) {
-      console.log(`[Memory] Including summary for ${allMessages.length - recentMessages.length} older messages`);
+      console.log(`[Memory] Including summary for ${olderMessageCount} older messages`);
       contextMessages.push({
         role: 'system',
         content: `[Previous conversation summary]\n${summary}`,
@@ -440,7 +452,7 @@ export class MemoryManager {
     return {
       messages: contextMessages,
       totalTokens: tokenCount,
-      summarizedCount: allMessages.length - recentMessages.length,
+      summarizedCount: olderMessageCount,
       summary,
     };
   }
@@ -559,6 +571,9 @@ export class MemoryManager {
       factId = result.lastInsertRowid as number;
     }
 
+    // Invalidate facts context cache
+    this.factsContextCacheValid = false;
+
     // Embed the fact asynchronously
     if (hasEmbeddings()) {
       const fact: Fact = { id: factId, category, subject, content, created_at: '', updated_at: '' };
@@ -580,8 +595,17 @@ export class MemoryManager {
   }
 
   getFactsForContext(): string {
+    // Return cached result if valid (avoids repeated DB queries on every message)
+    if (this.factsContextCacheValid && this.factsContextCache !== null) {
+      return this.factsContextCache;
+    }
+
     const facts = this.getAllFacts();
-    if (facts.length === 0) return '';
+    if (facts.length === 0) {
+      this.factsContextCache = '';
+      this.factsContextCacheValid = true;
+      return '';
+    }
 
     const byCategory = new Map<string, Fact[]>();
     for (const fact of facts) {
@@ -602,19 +626,28 @@ export class MemoryManager {
       }
     }
 
-    return lines.join('\n');
+    const result = lines.join('\n');
+    this.factsContextCache = result;
+    this.factsContextCacheValid = true;
+    return result;
   }
 
   deleteFact(id: number): boolean {
     // Chunks will be deleted by CASCADE
     const stmt = this.db.prepare('DELETE FROM facts WHERE id = ?');
     const result = stmt.run(id);
+    if (result.changes > 0) {
+      this.factsContextCacheValid = false; // Invalidate cache
+    }
     return result.changes > 0;
   }
 
   deleteFactBySubject(category: string, subject: string): boolean {
     const stmt = this.db.prepare('DELETE FROM facts WHERE category = ? AND subject = ?');
     const result = stmt.run(category, subject);
+    if (result.changes > 0) {
+      this.factsContextCacheValid = false; // Invalidate cache
+    }
     return result.changes > 0;
   }
 

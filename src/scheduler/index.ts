@@ -73,6 +73,7 @@ export class CronScheduler {
   private reminderInterval: ReturnType<typeof setInterval> | null = null;
   private lastJobCount: number = 0;
   private dbPath: string | null = null;
+  private db: Database.Database | null = null; // Persistent DB connection for reminders
   private isCheckingReminders: boolean = false; // Mutex to prevent overlapping checks
 
   constructor() {}
@@ -83,6 +84,12 @@ export class CronScheduler {
   async initialize(memory: MemoryManager, dbPath?: string): Promise<void> {
     this.memory = memory;
     this.dbPath = dbPath || null;
+
+    // Open persistent DB connection for reminder checks (avoids creating new connection every 30s)
+    if (this.dbPath) {
+      this.db = new Database(this.dbPath);
+    }
+
     await this.loadJobsFromDatabase();
     this.lastJobCount = this.jobs.size;
     console.log(`[Scheduler] Initialized with ${this.jobs.size} jobs`);
@@ -123,7 +130,7 @@ export class CronScheduler {
    * Uses mutex to prevent overlapping executions
    */
   private async checkReminders(): Promise<void> {
-    if (!this.dbPath) return;
+    if (!this.db) return;
 
     // Mutex: prevent overlapping executions
     if (this.isCheckingReminders) {
@@ -132,10 +139,9 @@ export class CronScheduler {
     }
 
     this.isCheckingReminders = true;
-    let db: Database.Database | null = null;
 
     try {
-      db = new Database(this.dbPath);
+      const db = this.db;
       const now = new Date();
 
       // Check calendar events
@@ -203,15 +209,8 @@ export class CronScheduler {
     } catch (error) {
       console.error('[Scheduler] Reminder check failed:', error);
     } finally {
-      // Always release mutex and close DB
+      // Release mutex (DB stays open for reuse)
       this.isCheckingReminders = false;
-      if (db) {
-        try {
-          db.close();
-        } catch {
-          // Ignore close errors
-        }
-      }
     }
   }
 
@@ -751,6 +750,16 @@ export class CronScheduler {
     if (this.reminderInterval) {
       clearInterval(this.reminderInterval);
       this.reminderInterval = null;
+    }
+
+    // Close persistent DB connection
+    if (this.db) {
+      try {
+        this.db.close();
+      } catch {
+        // Ignore close errors
+      }
+      this.db = null;
     }
 
     for (const [name, task] of this.tasks) {

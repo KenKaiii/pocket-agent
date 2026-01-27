@@ -229,6 +229,9 @@ export class TelegramBot extends BaseChannel {
   constructor() {
     super();
     const botToken = SettingsManager.get('telegram.botToken');
+    if (!botToken) {
+      throw new Error('Telegram bot token not configured');
+    }
     const allowedUsers = SettingsManager.getArray('telegram.allowedUserIds');
     this.bot = new Bot(botToken);
     this.allowedUserIds = new Set(allowedUsers.map(id => parseInt(id, 10)).filter(id => !isNaN(id)));
@@ -667,16 +670,24 @@ multiline</pre>
       return;
     }
 
-    this.isRunning = true;
-
-    this.bot.start({
-      onStart: (botInfo) => {
-        console.log(`[Telegram] Bot @${botInfo.username} started`);
-        console.log(`[Telegram] Allowlist: ${this.allowedUserIds.size > 0
-          ? Array.from(this.allowedUserIds).join(', ')
-          : 'disabled (all users allowed)'}`);
-      },
-    });
+    try {
+      // Start bot and wait for it to be ready
+      // Note: bot.start() returns a Promise that resolves when polling starts
+      await this.bot.start({
+        onStart: (botInfo) => {
+          console.log(`[Telegram] Bot @${botInfo.username} started`);
+          console.log(`[Telegram] Allowlist: ${this.allowedUserIds.size > 0
+            ? Array.from(this.allowedUserIds).join(', ')
+            : 'disabled (all users allowed)'}`);
+        },
+      });
+      // Only set isRunning after successful start
+      this.isRunning = true;
+    } catch (error) {
+      console.error('[Telegram] Failed to start bot:', error);
+      this.isRunning = false;
+      throw error;
+    }
   }
 
   async stop(): Promise<void> {
@@ -694,9 +705,14 @@ export function getTelegramBot(): TelegramBot | null {
   return telegramBotInstance;
 }
 
-export function createTelegramBot(): TelegramBot {
+export function createTelegramBot(): TelegramBot | null {
   if (!telegramBotInstance) {
-    telegramBotInstance = new TelegramBot();
+    try {
+      telegramBotInstance = new TelegramBot();
+    } catch (error) {
+      console.error('[Telegram] Failed to create bot:', error);
+      return null;
+    }
   }
   return telegramBotInstance;
 }

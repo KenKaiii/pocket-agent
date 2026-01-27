@@ -23,7 +23,7 @@ import {
 } from './macos';
 import { wrapToolHandler, getToolTimeout, logActiveToolsStatus } from './diagnostics';
 
-export { getActiveTools, logActiveToolsStatus } from './diagnostics';
+export { logActiveToolsStatus } from './diagnostics';
 
 // Start periodic check for stuck tools (every 30 seconds)
 setInterval(() => {
@@ -319,18 +319,6 @@ export async function buildSdkMcpServers(
     console.error('[Tools] Failed to build SDK MCP servers:', error);
     return null;
   }
-}
-
-/**
- * Get computer use tool definition for direct API use
- */
-export function getComputerUseTool(displaySize: { width: number; height: number }) {
-  return {
-    type: 'computer_20241022' as const,
-    name: 'computer',
-    display_width_px: displaySize.width,
-    display_height_px: displaySize.height,
-  };
 }
 
 /**

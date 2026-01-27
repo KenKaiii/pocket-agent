@@ -1,6 +1,7 @@
 import { app, Tray, Menu, nativeImage, BrowserWindow, ipcMain, Notification, globalShortcut } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { spawn, ChildProcess } from 'child_process';
 import { AgentManager } from '../agent';
 import { MemoryManager } from '../memory';
 import { createScheduler, CronScheduler } from '../scheduler';
@@ -1245,12 +1246,86 @@ function setupIPC(): void {
     };
   });
 
-  ipcMain.handle('skills:runSetupCommand', async (_, command: string) => {
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execAsync = promisify(exec);
+  // Secure setup command execution - validates against manifest and sanitizes inputs
+  ipcMain.handle(
+    'skills:runSetupCommand',
+    async (
+      _,
+      params: { skillName: string; stepId: string; inputs?: Record<string, string> }
+    ) => {
+      const { loadSkillsManifest } = await import('../skills');
 
-    try {
+      // Load manifest and validate skill exists
+      const projectRoot = app.isPackaged
+        ? path.join(process.resourcesPath, 'app')
+        : path.join(__dirname, '../..');
+      const skillsDir = path.join(projectRoot, '.claude');
+      const manifest = loadSkillsManifest(skillsDir);
+
+      if (!manifest || !manifest.skills[params.skillName]) {
+        return { success: false, error: 'Skill not found', output: '' };
+      }
+
+      const skill = manifest.skills[params.skillName];
+      if (!skill.setup || !skill.setup.steps) {
+        return { success: false, error: 'Skill has no setup steps', output: '' };
+      }
+
+      // Find the step
+      const step = skill.setup.steps.find(
+        (s: { id: string }) => s.id === params.stepId
+      );
+      if (!step || !step.command) {
+        return { success: false, error: 'Step not found or has no command', output: '' };
+      }
+
+      // Build command with sanitized input substitutions
+      let commandTemplate = step.command as string;
+      const inputs = params.inputs || {};
+
+      // Validate inputs don't contain shell metacharacters
+      const shellMetaChars = /[;&|`$(){}[\]<>\\!#*?"'\n\r]/;
+      for (const [key, value] of Object.entries(inputs)) {
+        if (shellMetaChars.test(value)) {
+          return {
+            success: false,
+            error: `Invalid characters in input "${key}"`,
+            output: '',
+          };
+        }
+        // Only substitute if the placeholder exists in template
+        if (commandTemplate.includes(`{{${key}}}`)) {
+          commandTemplate = commandTemplate.replace(
+            new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+            value
+          );
+        }
+      }
+
+      // Check for any remaining unsubstituted placeholders
+      if (/\{\{[^}]+\}\}/.test(commandTemplate)) {
+        return {
+          success: false,
+          error: 'Missing required inputs',
+          output: '',
+        };
+      }
+
+      // Parse command into binary and args (simple shell-like parsing)
+      const parts = commandTemplate.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+      if (parts.length === 0) {
+        return { success: false, error: 'Empty command', output: '' };
+      }
+
+      const binary = parts[0] as string;
+      const args = parts.slice(1).map((arg) => {
+        // Remove surrounding quotes if present
+        if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
+          return arg.slice(1, -1);
+        }
+        return arg;
+      });
+
       // Add common paths for homebrew, go, npm binaries
       const home = process.env.HOME || '';
       const extraPaths = [
@@ -1261,27 +1336,46 @@ function setupIPC(): void {
         `${home}/.local/bin`,
       ].join(':');
 
-      const { stdout, stderr } = await execAsync(command, {
-        timeout: 60000,
-        env: {
-          ...process.env,
-          PATH: `${extraPaths}:${process.env.PATH}`,
-        },
+      return new Promise<{ success: boolean; output: string; error?: string }>((resolve) => {
+        let stdout = '';
+        let stderr = '';
+
+        const child: ChildProcess = spawn(binary, args, {
+          env: {
+            ...process.env,
+            PATH: `${extraPaths}:${process.env.PATH}`,
+          },
+          timeout: 60000,
+          shell: false, // Explicitly disable shell to prevent injection
+        });
+
+        child.stdout?.on('data', (data: Buffer) => {
+          stdout += data.toString();
+        });
+
+        child.stderr?.on('data', (data: Buffer) => {
+          stderr += data.toString();
+        });
+
+        child.on('error', (error: Error) => {
+          resolve({
+            success: false,
+            error: error.message,
+            output: [stdout, stderr].filter(Boolean).join('\n'),
+          });
+        });
+
+        child.on('close', (code: number | null) => {
+          const output = [stdout, stderr].filter(Boolean).join('\n');
+          resolve({
+            success: code === 0,
+            output,
+            ...(code !== 0 && { error: `Command exited with code ${code}` }),
+          });
+        });
       });
-      // Combine stdout and stderr for display
-      const output = [stdout, stderr].filter(Boolean).join('\n');
-      return { success: true, output };
-    } catch (error) {
-      const err = error as { message?: string; stdout?: string; stderr?: string };
-      // Include any partial output in error case
-      const output = [err.stdout, err.stderr].filter(Boolean).join('\n');
-      return {
-        success: false,
-        error: err.message || 'Command failed',
-        output,
-      };
     }
-  });
+  );
 }
 
 // ============ Agent Lifecycle ============
@@ -1385,27 +1479,31 @@ async function initializeAgent(): Promise<void> {
     try {
       telegramBot = createTelegramBot();
 
-      // Set up cross-channel sync: Telegram -> Desktop
-      // Only send to chat window if it's already open - don't force open or notify
-      telegramBot.setOnMessageCallback((data) => {
-        // Only sync to desktop UI if chat window is already open
-        if (chatWindow && !chatWindow.isDestroyed()) {
-          chatWindow.webContents.send('telegram:message', {
-            userMessage: data.userMessage,
-            response: data.response,
-            chatId: data.chatId,
-          });
+      if (!telegramBot) {
+        console.error('[Main] Telegram bot creation failed');
+      } else {
+        // Set up cross-channel sync: Telegram -> Desktop
+        // Only send to chat window if it's already open - don't force open or notify
+        telegramBot.setOnMessageCallback((data) => {
+          // Only sync to desktop UI if chat window is already open
+          if (chatWindow && !chatWindow.isDestroyed()) {
+            chatWindow.webContents.send('telegram:message', {
+              userMessage: data.userMessage,
+              response: data.response,
+              chatId: data.chatId,
+            });
+          }
+          // Messages are already saved to SQLite, so they'll appear when user opens chat
+        });
+
+        await telegramBot.start();
+
+        if (scheduler) {
+          scheduler.setTelegramBot(telegramBot);
         }
-        // Messages are already saved to SQLite, so they'll appear when user opens chat
-      });
 
-      await telegramBot.start();
-
-      if (scheduler) {
-        scheduler.setTelegramBot(telegramBot);
+        console.log('[Main] Telegram started');
       }
-
-      console.log('[Main] Telegram started');
     } catch (error) {
       console.error('[Main] Telegram failed:', error);
     }

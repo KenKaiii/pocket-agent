@@ -85,7 +85,8 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   openPermissionSettings: (permissionType: string) => ipcRenderer.invoke('skills:openPermissionSettings', permissionType),
   checkPermission: (permissionType: string) => ipcRenderer.invoke('skills:checkPermission', permissionType),
   getSkillSetupConfig: (skillName: string) => ipcRenderer.invoke('skills:getSetupConfig', skillName),
-  runSkillSetupCommand: (command: string) => ipcRenderer.invoke('skills:runSetupCommand', command),
+  runSkillSetupCommand: (params: { skillName: string; stepId: string; inputs?: Record<string, string> }) =>
+    ipcRenderer.invoke('skills:runSetupCommand', params),
 });
 
 // Type declarations for renderer
