@@ -90,6 +90,13 @@ export interface DailyLog {
   updated_at: string;
 }
 
+export interface TelegramChatSession {
+  chat_id: number;
+  session_id: string;
+  group_name: string | null;
+  created_at: string;
+}
+
 // Summarizer function type - injected to avoid circular dependency with agent
 export type SummarizerFn = (messages: Message[]) => Promise<string>;
 
@@ -233,6 +240,14 @@ export class MemoryManager {
         updated_at TEXT DEFAULT (datetime('now'))
       );
 
+      -- Telegram chat to session mapping
+      CREATE TABLE IF NOT EXISTS telegram_chat_sessions (
+        chat_id INTEGER PRIMARY KEY,
+        session_id TEXT NOT NULL REFERENCES sessions(id),
+        group_name TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+
       -- Indexes for performance
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
       CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, timestamp);
@@ -245,6 +260,9 @@ export class MemoryManager {
       CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_date);
       CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
       CREATE INDEX IF NOT EXISTS idx_daily_logs_date ON daily_logs(date);
+
+      -- Unique constraint on session names (for Telegram group linking)
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_name_unique ON sessions(name);
     `);
 
     // Create FTS5 virtual table for keyword search
@@ -444,8 +462,15 @@ export class MemoryManager {
 
   /**
    * Create a new session
+   * @throws Error if session name already exists
    */
   createSession(name: string): Session {
+    // Check for duplicate name
+    const existing = this.getSessionByName(name);
+    if (existing) {
+      throw new Error(`Session name "${name}" already exists`);
+    }
+
     const id = `session-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     this.db.prepare(`
       INSERT INTO sessions (id, name, created_at, updated_at)
@@ -453,6 +478,19 @@ export class MemoryManager {
     `).run(id, name);
 
     return this.getSession(id)!;
+  }
+
+  /**
+   * Get a session by name (exact match)
+   */
+  getSessionByName(name: string): Session | null {
+    const row = this.db.prepare(`
+      SELECT id, name, created_at, updated_at
+      FROM sessions
+      WHERE name = ?
+    `).get(name) as Session | undefined;
+
+    return row || null;
   }
 
   /**
@@ -481,8 +519,15 @@ export class MemoryManager {
 
   /**
    * Rename a session
+   * @throws Error if new name already exists
    */
   renameSession(id: string, name: string): boolean {
+    // Check for duplicate name (excluding self)
+    const existing = this.getSessionByName(name);
+    if (existing && existing.id !== id) {
+      throw new Error(`Session name "${name}" already exists`);
+    }
+
     const result = this.db.prepare(`
       UPDATE sessions SET name = ?, updated_at = datetime('now')
       WHERE id = ?
@@ -501,9 +546,10 @@ export class MemoryManager {
       return false;
     }
 
-    // Delete messages first (due to foreign key)
+    // Delete related data first (due to foreign key constraints)
     this.db.prepare('DELETE FROM messages WHERE session_id = ?').run(id);
     this.db.prepare('DELETE FROM summaries WHERE session_id = ?').run(id);
+    this.db.prepare('DELETE FROM telegram_chat_sessions WHERE session_id = ?').run(id);
     const result = this.db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
 
     return result.changes > 0;
@@ -522,6 +568,66 @@ export class MemoryManager {
   getSessionMessageCount(sessionId: string): number {
     const row = this.db.prepare('SELECT COUNT(*) as c FROM messages WHERE session_id = ?').get(sessionId) as { c: number };
     return row.c;
+  }
+
+  // ============ TELEGRAM CHAT SESSION METHODS ============
+
+  /**
+   * Link a Telegram chat to a session
+   */
+  linkTelegramChat(chatId: number, sessionId: string, groupName?: string): boolean {
+    try {
+      this.db.prepare(`
+        INSERT INTO telegram_chat_sessions (chat_id, session_id, group_name)
+        VALUES (?, ?, ?)
+        ON CONFLICT(chat_id) DO UPDATE SET
+          session_id = excluded.session_id,
+          group_name = excluded.group_name
+      `).run(chatId, sessionId, groupName || null);
+      return true;
+    } catch (err) {
+      console.error('[Memory] Failed to link Telegram chat:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Unlink a Telegram chat from its session
+   */
+  unlinkTelegramChat(chatId: number): boolean {
+    const result = this.db.prepare('DELETE FROM telegram_chat_sessions WHERE chat_id = ?').run(chatId);
+    return result.changes > 0;
+  }
+
+  /**
+   * Get the session ID for a Telegram chat
+   */
+  getSessionForChat(chatId: number): string | null {
+    const row = this.db.prepare(`
+      SELECT session_id FROM telegram_chat_sessions WHERE chat_id = ?
+    `).get(chatId) as { session_id: string } | undefined;
+    return row?.session_id || null;
+  }
+
+  /**
+   * Get the Telegram chat ID for a session
+   */
+  getChatForSession(sessionId: string): number | null {
+    const row = this.db.prepare(`
+      SELECT chat_id FROM telegram_chat_sessions WHERE session_id = ?
+    `).get(sessionId) as { chat_id: number } | undefined;
+    return row?.chat_id || null;
+  }
+
+  /**
+   * Get all Telegram chat to session mappings
+   */
+  getAllTelegramChatSessions(): TelegramChatSession[] {
+    return this.db.prepare(`
+      SELECT chat_id, session_id, group_name, created_at
+      FROM telegram_chat_sessions
+      ORDER BY created_at DESC
+    `).all() as TelegramChatSession[];
   }
 
   // ============ DAILY LOG METHODS ============

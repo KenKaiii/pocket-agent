@@ -1442,16 +1442,20 @@
       }
 
       try {
-        const session = await window.pocketAgent.createSession('New');
-        sessions.push(session); // Add to end (right side)
-        currentSessionId = session.id;
+        const result = await window.pocketAgent.createSession('New');
+        if (!result.success || !result.session) {
+          addMessage('system', result.error || 'Failed to create session');
+          return;
+        }
+        sessions.push(result.session); // Add to end (right side)
+        currentSessionId = result.session.id;
         renderTabs();
         messagesDiv.innerHTML = '';
         showEmptyState();
         updateStats();
         input.focus();
         // Start rename immediately
-        setTimeout(() => startRenameSession(session.id), 100);
+        setTimeout(() => startRenameSession(result.session.id), 100);
       } catch (err) {
         console.error('Failed to create session:', err);
       }
@@ -1500,7 +1504,13 @@
       const sanitizedName = newName.replace(/\s/g, '').slice(0, 10) || 'Untitled';
 
       try {
-        await window.pocketAgent.renameSession(sessionId, sanitizedName);
+        const result = await window.pocketAgent.renameSession(sessionId, sanitizedName);
+        if (!result.success) {
+          // Show error (likely duplicate name)
+          addMessage('system', result.error || 'Failed to rename session');
+          renderTabs(); // Revert UI
+          return;
+        }
         // Update local state
         const session = sessions.find(s => s.id === sessionId);
         if (session) {
@@ -1557,6 +1567,13 @@
     }
 
     function handleTelegramMessage(data) {
+      // Only show message if it's for the current session
+      // (messages are already saved to SQLite for the correct session)
+      if (data.sessionId && data.sessionId !== currentSessionId) {
+        console.log(`[Chat] Telegram message for session ${data.sessionId}, current is ${currentSessionId} - skipping display`);
+        return;
+      }
+
       // Clear empty state if present
       const emptyState = messagesDiv.querySelector('.empty-state');
       if (emptyState) emptyState.remove();

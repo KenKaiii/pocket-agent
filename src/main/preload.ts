@@ -17,8 +17,8 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     ipcRenderer.on('scheduler:message', listener);
     return () => ipcRenderer.removeListener('scheduler:message', listener);
   },
-  onTelegramMessage: (callback: (data: { userMessage: string; response: string; chatId: number }) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, data: { userMessage: string; response: string; chatId: number }) => callback(data);
+  onTelegramMessage: (callback: (data: { userMessage: string; response: string; chatId: number; sessionId: string }) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: { userMessage: string; response: string; chatId: number; sessionId: string }) => callback(data);
     ipcRenderer.on('telegram:message', listener);
     return () => ipcRenderer.removeListener('telegram:message', listener);
   },
@@ -112,14 +112,14 @@ declare global {
       onStatus: (callback: (status: { type: string; toolName?: string; toolInput?: string; message?: string }) => void) => () => void;
       saveAttachment: (name: string, dataUrl: string) => Promise<string>;
       onSchedulerMessage: (callback: (data: { jobName: string; prompt: string; response: string }) => void) => () => void;
-      onTelegramMessage: (callback: (data: { userMessage: string; response: string; chatId: number }) => void) => () => void;
+      onTelegramMessage: (callback: (data: { userMessage: string; response: string; chatId: number; sessionId: string }) => void) => () => void;
       getHistory: (limit?: number, sessionId?: string) => Promise<Array<{ role: string; content: string; timestamp: string }>>;
       getStats: (sessionId?: string) => Promise<{ messageCount: number; factCount: number; estimatedTokens: number; sessionCount?: number } | null>;
       clearConversation: (sessionId?: string) => Promise<{ success: boolean }>;
       // Sessions
       getSessions: () => Promise<Session[]>;
-      createSession: (name: string) => Promise<Session>;
-      renameSession: (id: string, name: string) => Promise<{ success: boolean }>;
+      createSession: (name: string) => Promise<{ success: boolean; session?: Session; error?: string }>;
+      renameSession: (id: string, name: string) => Promise<{ success: boolean; error?: string }>;
       deleteSession: (id: string) => Promise<{ success: boolean }>;
       listFacts: () => Promise<Array<{ id: number; category: string; subject: string; content: string }>>;
       searchFacts: (query: string) => Promise<Array<{ category: string; subject: string; content: string }>>;

@@ -217,6 +217,7 @@ export type MessageCallback = (data: {
   response: string;
   channel: 'telegram';
   chatId: number;
+  sessionId: string;
 }) => void;
 
 export class TelegramBot extends BaseChannel {
@@ -298,9 +299,138 @@ export class TelegramBot extends BaseChannel {
       await next();
     });
 
+    // Handle bot being added to a group - auto-link to session
+    this.bot.on('my_chat_member', async (ctx) => {
+      const chatId = ctx.chat?.id;
+      const newStatus = ctx.myChatMember?.new_chat_member?.status;
+      const chatType = ctx.chat?.type;
+
+      // Only handle when bot is added to a group (not kicked/left)
+      if (!chatId || !['member', 'administrator'].includes(newStatus || '')) {
+        return;
+      }
+
+      // Only handle group chats (not private chats)
+      if (chatType !== 'group' && chatType !== 'supergroup') {
+        return;
+      }
+
+      const groupName = ctx.chat?.title || '';
+      console.log(`[Telegram] Bot added to group "${groupName}" (chatId: ${chatId})`);
+
+      // Try to match group name to a session
+      const memory = AgentManager.getMemory();
+      if (!memory) {
+        await ctx.reply('⚠️ Memory not initialized. Please try again later.');
+        return;
+      }
+
+      const session = memory.getSessionByName(groupName);
+      if (session) {
+        // Link the chat to the session
+        memory.linkTelegramChat(chatId, session.id, groupName);
+        await ctx.reply(
+          `✅ Linked to session "${session.name}"\n\n` +
+          `Messages in this group will now sync with the "${session.name}" session in the desktop app.\n\n` +
+          `⚠️ Note: To see all messages (not just commands), either:\n` +
+          `• Make me an admin in this group, OR\n` +
+          `• Disable Privacy Mode via @BotFather (/setprivacy → Disable)`
+        );
+        console.log(`[Telegram] Linked group "${groupName}" (chatId: ${chatId}) to session "${session.id}"`);
+      } else {
+        // List available sessions
+        const sessions = memory.getSessions();
+        const sessionNames = sessions.map(s => `• ${s.name}`).join('\n');
+        await ctx.reply(
+          `⚠️ No session found with name "${groupName}"\n\n` +
+          `Available sessions:\n${sessionNames}\n\n` +
+          `To link this group, rename it to match one of the session names above, or use /link <session-name>.`
+        );
+      }
+    });
+
+    // Handle /link command for manual linking
+    this.bot.command('link', async (ctx) => {
+      const chatId = ctx.chat?.id;
+      const chatType = ctx.chat?.type;
+      const sessionName = ctx.message?.text?.replace('/link', '').trim();
+
+      if (!chatId) return;
+
+      // Only allow linking in groups
+      if (chatType !== 'group' && chatType !== 'supergroup') {
+        await ctx.reply('The /link command only works in group chats. Create a group and add me to it first.');
+        return;
+      }
+
+      if (!sessionName) {
+        const memory = AgentManager.getMemory();
+        const sessions = memory?.getSessions() || [];
+        const sessionNames = sessions.map(s => `• ${s.name}`).join('\n');
+        await ctx.reply(
+          `Usage: /link <session-name>\n\n` +
+          `Available sessions:\n${sessionNames}`
+        );
+        return;
+      }
+
+      const memory = AgentManager.getMemory();
+      if (!memory) {
+        await ctx.reply('⚠️ Memory not initialized. Please try again later.');
+        return;
+      }
+
+      const session = memory.getSessionByName(sessionName);
+      if (!session) {
+        const sessions = memory.getSessions();
+        const sessionNames = sessions.map(s => `• ${s.name}`).join('\n');
+        await ctx.reply(
+          `❌ No session found with name "${sessionName}"\n\n` +
+          `Available sessions:\n${sessionNames}`
+        );
+        return;
+      }
+
+      // Link the chat to the session
+      memory.linkTelegramChat(chatId, session.id, ctx.chat?.title || undefined);
+      await ctx.reply(
+        `✅ Linked to session "${session.name}"\n\n` +
+        `Messages in this group will now sync with the "${session.name}" session.\n\n` +
+        `⚠️ Note: To see all messages (not just commands), either:\n` +
+        `• Make me an admin in this group, OR\n` +
+        `• Disable Privacy Mode via @BotFather (/setprivacy → Disable)`
+      );
+      console.log(`[Telegram] Manually linked chat ${chatId} to session "${session.id}"`);
+    });
+
+    // Handle /unlink command
+    this.bot.command('unlink', async (ctx) => {
+      const chatId = ctx.chat?.id;
+      if (!chatId) return;
+
+      const memory = AgentManager.getMemory();
+      if (!memory) {
+        await ctx.reply('⚠️ Memory not initialized.');
+        return;
+      }
+
+      const currentSession = memory.getSessionForChat(chatId);
+      if (!currentSession) {
+        await ctx.reply('This chat is not linked to any session.');
+        return;
+      }
+
+      memory.unlinkTelegramChat(chatId);
+      await ctx.reply('✅ Chat unlinked. Messages will now go to the default session.');
+      console.log(`[Telegram] Unlinked chat ${chatId}`);
+    });
+
     // Handle /start command
     this.bot.command('start', async (ctx) => {
       const userId = ctx.from?.id;
+      const chatType = ctx.chat?.type;
+      const isGroup = chatType === 'group' || chatType === 'supergroup';
+
       await ctx.reply(
         `Welcome to Pocket Agent!\n\n` +
         `I'm your personal AI assistant with persistent memory. ` +
@@ -310,7 +440,8 @@ export class TelegramBot extends BaseChannel {
         `/status - Show agent status\n` +
         `/facts [query] - Search stored facts\n` +
         `/clear - Clear conversation (keeps facts)\n` +
-        `/mychatid - Show your chat ID for cron jobs`
+        `/mychatid - Show your chat ID for cron jobs` +
+        (isGroup ? `\n/link <session> - Link this group to a session\n/unlink - Unlink this group` : '')
       );
     });
 
@@ -440,7 +571,11 @@ multiline</pre>
       }, 4000);
 
       try {
-        const result = await AgentManager.processMessage(message, 'telegram');
+        // Look up which session this chat is linked to
+        const memory = AgentManager.getMemory();
+        const sessionId = memory?.getSessionForChat(chatId) || 'default';
+
+        const result = await AgentManager.processMessage(message, 'telegram', sessionId);
 
         // Send response, splitting if necessary
         await this.sendResponse(ctx, result.response);
@@ -452,6 +587,7 @@ multiline</pre>
             response: result.response,
             channel: 'telegram',
             chatId,
+            sessionId,
           });
         }
 

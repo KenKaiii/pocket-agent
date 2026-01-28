@@ -1033,12 +1033,20 @@ function setupIPC(): void {
   });
 
   ipcMain.handle('sessions:create', async (_, name: string) => {
-    return memory?.createSession(name);
+    try {
+      return { success: true, session: memory?.createSession(name) };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
   });
 
   ipcMain.handle('sessions:rename', async (_, id: string, name: string) => {
-    const success = memory?.renameSession(id, name) ?? false;
-    return { success };
+    try {
+      const success = memory?.renameSession(id, name) ?? false;
+      return { success };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
   });
 
   ipcMain.handle('sessions:delete', async (_, id: string) => {
@@ -1672,6 +1680,7 @@ async function initializeAgent(): Promise<void> {
               userMessage: data.userMessage,
               response: data.response,
               chatId: data.chatId,
+              sessionId: data.sessionId,
             });
           }
           // Messages are already saved to SQLite, so they'll appear when user opens chat
