@@ -229,7 +229,14 @@ class AgentManagerClass extends EventEmitter {
       if (isScheduledJob && isHeartbeat) {
         console.log('[AgentManager] Skipping HEARTBEAT_OK from scheduled job - not saving to memory');
       } else {
-        this.memory.saveMessage('user', userMessage, sessionId);
+        // Strip the heartbeat instruction suffix from scheduled job messages before saving
+        // This is purely an LLM instruction and should not be shown in the UI
+        const heartbeatSuffix = '\n\nIf nothing needs attention, reply with only HEARTBEAT_OK.';
+        const messageToSave = userMessage.endsWith(heartbeatSuffix)
+          ? userMessage.slice(0, -heartbeatSuffix.length)
+          : userMessage;
+
+        this.memory.saveMessage('user', messageToSave, sessionId);
         this.memory.saveMessage('assistant', response, sessionId);
         console.log('[AgentManager] Saved messages to SQLite (session: ' + sessionId + ')');
       }
