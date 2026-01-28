@@ -178,6 +178,33 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     description: 'How much reasoning to show (none, minimal, normal, extended)',
     type: 'string',
   },
+  {
+    key: 'agent.recentMessageLimit',
+    defaultValue: '20',
+    encrypted: false,
+    category: 'agent',
+    label: 'Recent Message Limit',
+    description: 'Number of recent messages to include in context (rest are summarized)',
+    type: 'number',
+  },
+  {
+    key: 'agent.rollingSummaryInterval',
+    defaultValue: '50',
+    encrypted: false,
+    category: 'agent',
+    label: 'Rolling Summary Interval',
+    description: 'Create summaries every N messages',
+    type: 'number',
+  },
+  {
+    key: 'agent.semanticRetrievalCount',
+    defaultValue: '5',
+    encrypted: false,
+    category: 'agent',
+    label: 'Semantic Retrieval Count',
+    description: 'Number of semantically relevant past messages to include (0 to disable)',
+    type: 'number',
+  },
 
   // Telegram settings
   {

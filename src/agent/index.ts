@@ -1,4 +1,4 @@
-import { MemoryManager, Message } from '../memory';
+import { MemoryManager, Message, SmartContextOptions } from '../memory';
 import { buildMCPServers, buildSdkMcpServers, setMemoryManager, ToolsConfig, validateToolsConfig, setCurrentSessionId } from '../tools';
 import { closeBrowserManager } from '../browser';
 import { loadIdentity } from '../config/identity';
@@ -10,11 +10,26 @@ import { EventEmitter } from 'events';
 const DEFAULT_MAX_CONTEXT_TOKENS = 150000;
 const COMPACTION_RATIO = 0.8; // Start compacting at 80% capacity
 
+// Smart context defaults
+const DEFAULT_RECENT_MESSAGE_LIMIT = 20;
+const DEFAULT_ROLLING_SUMMARY_INTERVAL = 50;
+const DEFAULT_SEMANTIC_RETRIEVAL_COUNT = 5;
+
 // Get token limits from settings
 function getTokenLimits(): { maxContextTokens: number; compactionThreshold: number } {
   const maxContextTokens = Number(SettingsManager.get('agent.maxContextTokens')) || DEFAULT_MAX_CONTEXT_TOKENS;
   const compactionThreshold = Math.floor(maxContextTokens * COMPACTION_RATIO);
   return { maxContextTokens, compactionThreshold };
+}
+
+// Get smart context options from settings
+function getSmartContextOptions(currentQuery?: string): SmartContextOptions {
+  return {
+    recentMessageLimit: Number(SettingsManager.get('agent.recentMessageLimit')) || DEFAULT_RECENT_MESSAGE_LIMIT,
+    rollingSummaryInterval: Number(SettingsManager.get('agent.rollingSummaryInterval')) || DEFAULT_ROLLING_SUMMARY_INTERVAL,
+    semanticRetrievalCount: Number(SettingsManager.get('agent.semanticRetrievalCount')) || DEFAULT_SEMANTIC_RETRIEVAL_COUNT,
+    currentQuery,
+  };
 }
 
 // Status event types
@@ -144,6 +159,28 @@ class AgentManagerClass extends EventEmitter {
         console.log('[AgentManager] Browser: 2-tier (Electron, CDP)');
       }
     }
+
+    // Backfill message embeddings asynchronously (for semantic retrieval)
+    this.backfillMessageEmbeddings().catch(e => {
+      console.error('[AgentManager] Embedding backfill failed:', e);
+    });
+  }
+
+  /**
+   * Backfill embeddings for messages that don't have them yet.
+   * Runs asynchronously in the background during initialization.
+   */
+  private async backfillMessageEmbeddings(): Promise<void> {
+    if (!this.memory) return;
+
+    // Get all sessions and backfill each
+    const sessions = this.memory.getSessions();
+    for (const session of sessions) {
+      const embedded = await this.memory.embedRecentMessages(session.id, 100);
+      if (embedded > 0) {
+        console.log(`[AgentManager] Backfilled ${embedded} embeddings for session ${session.id}`);
+      }
+    }
   }
 
   isInitialized(): boolean {
@@ -248,30 +285,42 @@ class AgentManagerClass extends EventEmitter {
     setCurrentSessionId(sessionId);
 
     try {
-      const { maxContextTokens, compactionThreshold } = getTokenLimits();
-      const statsBefore = memory.getStats(sessionId);
-      if (statsBefore.estimatedTokens > compactionThreshold) {
-        console.log('[AgentManager] Token limit approaching, running compaction...');
-        await this.runCompaction(sessionId);
-        wasCompacted = true;
-      }
-
-      const context = await memory.getConversationContext(maxContextTokens, sessionId);
+      // Use smart context: recent messages + rolling summary + semantic retrieval
+      const smartContextOptions = getSmartContextOptions(userMessage);
+      const smartContext = await memory.getSmartContext(sessionId, smartContextOptions);
       const factsContext = memory.getFactsForContext();
 
-      console.log(`[AgentManager] Loaded ${context.messages.length} messages (${context.totalTokens} tokens)`);
+      console.log(`[AgentManager] Smart context: ${smartContext.stats.recentCount} recent, ${smartContext.stats.summarizedMessages} summarized, ${smartContext.stats.relevantCount} relevant (${smartContext.totalTokens} tokens)`);
 
       const contextParts: string[] = [];
 
-      if (context.messages.length > 0) {
-        const historyText = context.messages
+      // Add rolling summary of older conversations
+      if (smartContext.rollingSummary) {
+        contextParts.push(`[Summary of previous conversations]\n${smartContext.rollingSummary}`);
+      }
+
+      // Add semantically relevant past messages
+      if (smartContext.relevantMessages.length > 0) {
+        const relevantText = smartContext.relevantMessages
           .map(m => {
             const timeStr = m.timestamp ? this.formatMessageTimestamp(m.timestamp) : '';
             const prefix = timeStr ? `${m.role.toUpperCase()} [${timeStr}]` : m.role.toUpperCase();
             return `${prefix}: ${m.content}`;
           })
           .join('\n\n');
-        contextParts.push(`Previous conversation:\n${historyText}`);
+        contextParts.push(`[Relevant past context]\n${relevantText}`);
+      }
+
+      // Add recent conversation
+      if (smartContext.recentMessages.length > 0) {
+        const historyText = smartContext.recentMessages
+          .map(m => {
+            const timeStr = m.timestamp ? this.formatMessageTimestamp(m.timestamp) : '';
+            const prefix = timeStr ? `${m.role.toUpperCase()} [${timeStr}]` : m.role.toUpperCase();
+            return `${prefix}: ${m.content}`;
+          })
+          .join('\n\n');
+        contextParts.push(`[Recent conversation]\n${historyText}`);
       }
 
       const fullPrompt = contextParts.length > 0
@@ -282,7 +331,7 @@ class AgentManagerClass extends EventEmitter {
       if (!query) throw new Error('Failed to load SDK');
 
       // Get last user message timestamp for temporal context
-      const userMessages = context.messages.filter(m => m.role === 'user');
+      const userMessages = smartContext.recentMessages.filter(m => m.role === 'user');
       const lastUserMessageTimestamp = userMessages.length > 0
         ? userMessages[userMessages.length - 1].timestamp
         : undefined;
@@ -325,9 +374,14 @@ class AgentManagerClass extends EventEmitter {
           ? userMessage.slice(0, -heartbeatSuffix.length)
           : userMessage;
 
-        memory.saveMessage('user', messageToSave, sessionId);
-        memory.saveMessage('assistant', response, sessionId);
+        const userMsgId = memory.saveMessage('user', messageToSave, sessionId);
+        const assistantMsgId = memory.saveMessage('assistant', response, sessionId);
         console.log('[AgentManager] Saved messages to SQLite (session: ' + sessionId + ')');
+
+        // Embed messages asynchronously for future semantic retrieval
+        // Don't await - let it run in background
+        memory.embedMessage(userMsgId).catch(e => console.error('[AgentManager] Failed to embed user message:', e));
+        memory.embedMessage(assistantMsgId).catch(e => console.error('[AgentManager] Failed to embed assistant message:', e));
       }
 
       this.extractAndStoreFacts(userMessage);

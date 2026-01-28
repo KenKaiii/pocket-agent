@@ -58,6 +58,26 @@ export interface ConversationContext {
   summary?: string;
 }
 
+export interface SmartContextOptions {
+  recentMessageLimit: number;      // Number of recent messages to include
+  rollingSummaryInterval: number;  // Create summaries every N messages
+  semanticRetrievalCount: number;  // Number of semantically relevant messages to retrieve
+  currentQuery?: string;           // Current user query for semantic search
+}
+
+export interface SmartContext {
+  recentMessages: Array<{ role: string; content: string; timestamp?: string }>;
+  rollingSummary: string | null;
+  relevantMessages: Array<{ role: string; content: string; timestamp?: string; similarity?: number }>;
+  totalTokens: number;
+  stats: {
+    totalMessages: number;
+    summarizedMessages: number;
+    recentCount: number;
+    relevantCount: number;
+  };
+}
+
 export interface SearchResult {
   fact: Fact;
   score: number;
@@ -250,9 +270,31 @@ export class MemoryManager {
         created_at TEXT DEFAULT (datetime('now'))
       );
 
+      -- Message embeddings for semantic search of past conversations
+      CREATE TABLE IF NOT EXISTS message_embeddings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id INTEGER NOT NULL UNIQUE,
+        embedding BLOB NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+      );
+
+      -- Rolling summaries for smart context (different from compaction summaries)
+      CREATE TABLE IF NOT EXISTS rolling_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL REFERENCES sessions(id),
+        start_message_id INTEGER NOT NULL,
+        end_message_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        token_count INTEGER,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+
       -- Indexes for performance
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
       CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, timestamp);
+      CREATE INDEX IF NOT EXISTS idx_message_embeddings_message ON message_embeddings(message_id);
+      CREATE INDEX IF NOT EXISTS idx_rolling_summaries_session ON rolling_summaries(session_id, end_message_id);
       CREATE INDEX IF NOT EXISTS idx_facts_category ON facts(category);
       CREATE INDEX IF NOT EXISTS idx_facts_subject ON facts(subject);
       CREATE INDEX IF NOT EXISTS idx_chunks_fact_id ON chunks(fact_id);
@@ -914,6 +956,321 @@ export class MemoryManager {
       summarizedCount: olderMessageCount,
       summary,
     };
+  }
+
+  /**
+   * Get smart context using rolling summaries, recent messages, and semantic retrieval.
+   * This is more efficient than loading all messages into context.
+   */
+  async getSmartContext(
+    sessionId: string = 'default',
+    options: SmartContextOptions
+  ): Promise<SmartContext> {
+    const { recentMessageLimit, rollingSummaryInterval, semanticRetrievalCount, currentQuery } = options;
+
+    // 1. Get total message count
+    const totalMessages = this.getMessageCount(sessionId);
+
+    // 2. Get recent messages (last N messages)
+    const recentMessagesQuery = this.db.prepare(`
+      SELECT id, role, content, timestamp, token_count
+      FROM messages
+      WHERE session_id = ?
+      ORDER BY id DESC
+      LIMIT ?
+    `).all(sessionId, recentMessageLimit) as Message[];
+
+    const recentMessages = recentMessagesQuery.reverse(); // Oldest first
+    const oldestRecentId = recentMessages[0]?.id || 0;
+
+    // 3. Get or create rolling summary for older messages
+    let rollingSummary: string | null = null;
+    const summarizedMessages = totalMessages - recentMessages.length;
+
+    if (summarizedMessages > 0 && oldestRecentId > 1) {
+      rollingSummary = await this.getOrCreateRollingSummary(
+        oldestRecentId,
+        sessionId,
+        rollingSummaryInterval
+      );
+    }
+
+    // 4. Get semantically relevant messages (if embeddings available and query provided)
+    let relevantMessages: Array<{ role: string; content: string; timestamp?: string; similarity?: number }> = [];
+    if (semanticRetrievalCount > 0 && currentQuery && this.embeddingsReady) {
+      relevantMessages = await this.searchRelevantMessages(
+        currentQuery,
+        sessionId,
+        semanticRetrievalCount,
+        recentMessages.map(m => m.id) // Exclude recent messages
+      );
+    }
+
+    // 5. Calculate total tokens
+    let totalTokens = 0;
+    for (const msg of recentMessages) {
+      totalTokens += msg.token_count || estimateTokens(msg.content);
+    }
+    if (rollingSummary) {
+      totalTokens += estimateTokens(rollingSummary);
+    }
+    for (const msg of relevantMessages) {
+      totalTokens += estimateTokens(msg.content);
+    }
+
+    console.log(`[Memory] Smart context: ${recentMessages.length} recent, ${summarizedMessages} summarized, ${relevantMessages.length} relevant (${totalTokens} tokens)`);
+
+    return {
+      recentMessages: recentMessages.map(m => ({
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp,
+      })),
+      rollingSummary,
+      relevantMessages,
+      totalTokens,
+      stats: {
+        totalMessages,
+        summarizedMessages,
+        recentCount: recentMessages.length,
+        relevantCount: relevantMessages.length,
+      },
+    };
+  }
+
+  /**
+   * Get or create a rolling summary for messages before the given ID.
+   * Creates incremental summaries every N messages.
+   */
+  private async getOrCreateRollingSummary(
+    beforeMessageId: number,
+    sessionId: string,
+    interval: number
+  ): Promise<string | null> {
+    // Check for existing rolling summary that covers up to beforeMessageId-1
+    const existingSummary = this.db.prepare(`
+      SELECT content FROM rolling_summaries
+      WHERE session_id = ? AND end_message_id <= ?
+      ORDER BY end_message_id DESC
+      LIMIT 1
+    `).get(sessionId, beforeMessageId - 1) as { content: string } | undefined;
+
+    // Get the oldest message we need to summarize from
+    const lastSummarizedId = existingSummary
+      ? (this.db.prepare(`
+          SELECT end_message_id FROM rolling_summaries
+          WHERE session_id = ? AND end_message_id <= ?
+          ORDER BY end_message_id DESC
+          LIMIT 1
+        `).get(sessionId, beforeMessageId - 1) as { end_message_id: number })?.end_message_id || 0
+      : 0;
+
+    // Get messages that need summarizing (between last summary and beforeMessageId)
+    const unsummarizedMessages = this.db.prepare(`
+      SELECT id, role, content, timestamp
+      FROM messages
+      WHERE session_id = ? AND id > ? AND id < ?
+      ORDER BY id ASC
+    `).all(sessionId, lastSummarizedId, beforeMessageId) as Message[];
+
+    // If we have enough unsummarized messages, create a new rolling summary
+    if (unsummarizedMessages.length >= interval && this.summarizer) {
+      const newSummary = await this.createRollingSummary(
+        unsummarizedMessages,
+        sessionId,
+        existingSummary?.content
+      );
+
+      // Store the new rolling summary
+      const startId = unsummarizedMessages[0].id;
+      const endId = unsummarizedMessages[unsummarizedMessages.length - 1].id;
+
+      this.db.prepare(`
+        INSERT INTO rolling_summaries (session_id, start_message_id, end_message_id, content, token_count)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(sessionId, startId, endId, newSummary, estimateTokens(newSummary));
+
+      console.log(`[Memory] Created rolling summary for messages ${startId}-${endId}`);
+
+      // Combine with existing summary
+      if (existingSummary?.content) {
+        return `${existingSummary.content}\n\n${newSummary}`;
+      }
+      return newSummary;
+    }
+
+    // Return existing summary combined with basic summary of recent unsummarized
+    if (existingSummary?.content) {
+      if (unsummarizedMessages.length > 0) {
+        const basicSummary = this.createBasicSummary(unsummarizedMessages);
+        return `${existingSummary.content}\n\n${basicSummary}`;
+      }
+      return existingSummary.content;
+    }
+
+    // No existing summary - create basic summary if we have messages
+    if (unsummarizedMessages.length > 0) {
+      return this.createBasicSummary(unsummarizedMessages);
+    }
+
+    return null;
+  }
+
+  /**
+   * Create a rolling summary from messages, optionally incorporating a previous summary.
+   */
+  private async createRollingSummary(
+    messages: Message[],
+    sessionId: string,
+    previousSummary?: string
+  ): Promise<string> {
+    if (!this.summarizer) {
+      return this.createBasicSummary(messages);
+    }
+
+    try {
+      // If there's a previous summary, include it as context
+      const messagesWithContext = previousSummary
+        ? [{ id: 0, role: 'system' as const, content: `[Previous summary]\n${previousSummary}`, timestamp: '' }, ...messages]
+        : messages;
+
+      const summary = await this.summarizer(messagesWithContext);
+      console.log(`[Memory] Created rolling summary for session ${sessionId} (${messages.length} messages, ${estimateTokens(summary)} tokens)`);
+      return summary;
+    } catch (error) {
+      console.error('[Memory] Rolling summary failed, using basic summary:', error);
+      return this.createBasicSummary(messages);
+    }
+  }
+
+  /**
+   * Search for semantically relevant past messages using embeddings.
+   */
+  private async searchRelevantMessages(
+    query: string,
+    sessionId: string,
+    limit: number,
+    excludeIds: number[]
+  ): Promise<Array<{ role: string; content: string; timestamp?: string; similarity: number }>> {
+    if (!hasEmbeddings()) {
+      return [];
+    }
+
+    try {
+      const queryEmbedding = await embed(query);
+
+      // Get message embeddings (excluding recent messages)
+      const excludeList = excludeIds.length > 0 ? excludeIds.join(',') : '0';
+      const embeddings = this.db.prepare(`
+        SELECT me.message_id, me.embedding, m.role, m.content, m.timestamp
+        FROM message_embeddings me
+        JOIN messages m ON me.message_id = m.id
+        WHERE m.session_id = ? AND m.id NOT IN (${excludeList})
+        ORDER BY m.id DESC
+        LIMIT 200
+      `).all(sessionId) as Array<{
+        message_id: number;
+        embedding: Buffer;
+        role: string;
+        content: string;
+        timestamp: string;
+      }>;
+
+      if (embeddings.length === 0) {
+        return [];
+      }
+
+      // Calculate similarities
+      const scored = embeddings.map(e => ({
+        role: e.role,
+        content: e.content,
+        timestamp: e.timestamp,
+        similarity: cosineSimilarity(queryEmbedding, deserializeEmbedding(e.embedding)),
+      }));
+
+      // Sort by similarity and take top N
+      scored.sort((a, b) => b.similarity - a.similarity);
+      const relevant = scored.slice(0, limit).filter(m => m.similarity > 0.3);
+
+      if (relevant.length > 0) {
+        console.log(`[Memory] Found ${relevant.length} relevant messages (top similarity: ${relevant[0].similarity.toFixed(3)})`);
+      }
+
+      return relevant;
+    } catch (error) {
+      console.error('[Memory] Semantic search failed:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Embed a message and store in message_embeddings table.
+   * Called after saving a message to enable future semantic search.
+   */
+  async embedMessage(messageId: number): Promise<void> {
+    if (!hasEmbeddings()) {
+      return;
+    }
+
+    try {
+      const message = this.db.prepare(`
+        SELECT content FROM messages WHERE id = ?
+      `).get(messageId) as { content: string } | undefined;
+
+      if (!message) return;
+
+      const embedding = await embed(message.content);
+      const embeddingBuffer = serializeEmbedding(embedding);
+
+      this.db.prepare(`
+        INSERT OR REPLACE INTO message_embeddings (message_id, embedding)
+        VALUES (?, ?)
+      `).run(messageId, embeddingBuffer);
+    } catch (error) {
+      console.error(`[Memory] Failed to embed message ${messageId}:`, error);
+    }
+  }
+
+  /**
+   * Embed recent messages that don't have embeddings yet.
+   * Called periodically to backfill embeddings.
+   */
+  async embedRecentMessages(sessionId: string = 'default', limit: number = 50): Promise<number> {
+    if (!hasEmbeddings()) {
+      return 0;
+    }
+
+    const unembeddedMessages = this.db.prepare(`
+      SELECT m.id, m.content
+      FROM messages m
+      LEFT JOIN message_embeddings me ON m.id = me.message_id
+      WHERE m.session_id = ? AND me.id IS NULL
+      ORDER BY m.id DESC
+      LIMIT ?
+    `).all(sessionId, limit) as Array<{ id: number; content: string }>;
+
+    let embedded = 0;
+    for (const msg of unembeddedMessages) {
+      try {
+        const embedding = await embed(msg.content);
+        const embeddingBuffer = serializeEmbedding(embedding);
+
+        this.db.prepare(`
+          INSERT OR REPLACE INTO message_embeddings (message_id, embedding)
+          VALUES (?, ?)
+        `).run(msg.id, embeddingBuffer);
+
+        embedded++;
+      } catch (error) {
+        console.error(`[Memory] Failed to embed message ${msg.id}:`, error);
+      }
+    }
+
+    if (embedded > 0) {
+      console.log(`[Memory] Embedded ${embedded} messages for session ${sessionId}`);
+    }
+
+    return embedded;
   }
 
   private async getOrCreateSummary(beforeMessageId: number, sessionId: string = 'default'): Promise<string | undefined> {
