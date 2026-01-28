@@ -19,7 +19,7 @@ function getTokenLimits(): { maxContextTokens: number; compactionThreshold: numb
 
 // Status event types
 export type AgentStatus = {
-  type: 'thinking' | 'tool_start' | 'tool_end' | 'responding' | 'done' | 'subagent_start' | 'subagent_update' | 'subagent_end';
+  type: 'thinking' | 'tool_start' | 'tool_end' | 'responding' | 'done' | 'subagent_start' | 'subagent_update' | 'subagent_end' | 'queued' | 'queue_processing';
   toolName?: string;
   toolInput?: string;
   message?: string;
@@ -27,6 +27,9 @@ export type AgentStatus = {
   agentId?: string;
   agentType?: string;
   agentCount?: number;  // Number of active subagents
+  // Queue tracking
+  queuePosition?: number;
+  queuedMessage?: string;
 };
 
 // SDK types (loaded dynamically)
@@ -98,6 +101,7 @@ class AgentManagerClass extends EventEmitter {
   private abortControllersBySession: Map<string, AbortController> = new Map();
   private processingBySession: Map<string, boolean> = new Map();
   private lastSuggestedPrompt: string | undefined = undefined;
+  private messageQueueBySession: Map<string, Array<{ message: string; channel: string; resolve: (result: ProcessResult) => void; reject: (error: Error) => void }>> = new Map();
 
   private constructor() {
     super();
@@ -155,9 +159,84 @@ class AgentManagerClass extends EventEmitter {
       throw new Error('AgentManager not initialized - call initialize() first');
     }
 
+    // If already processing, queue the message
     if (this.processingBySession.get(sessionId)) {
-      throw new Error(`A message is already being processed in session ${sessionId}`);
+      return this.queueMessage(userMessage, channel, sessionId);
     }
+
+    return this.executeMessage(userMessage, channel, sessionId);
+  }
+
+  /**
+   * Queue a message to be processed after the current one finishes
+   */
+  private queueMessage(
+    userMessage: string,
+    channel: string,
+    sessionId: string
+  ): Promise<ProcessResult> {
+    return new Promise((resolve, reject) => {
+      // Get or create queue for this session
+      if (!this.messageQueueBySession.has(sessionId)) {
+        this.messageQueueBySession.set(sessionId, []);
+      }
+      const queue = this.messageQueueBySession.get(sessionId)!;
+
+      // Add to queue
+      queue.push({ message: userMessage, channel, resolve, reject });
+
+      const queuePosition = queue.length;
+      console.log(`[AgentManager] Message queued at position ${queuePosition} for session ${sessionId}`);
+
+      // Emit queued status
+      this.emitStatus({
+        type: 'queued',
+        queuePosition,
+        queuedMessage: userMessage.slice(0, 100),
+        message: `Message queued (#${queuePosition})`,
+      });
+    });
+  }
+
+  /**
+   * Process the next message in the queue for a session
+   */
+  private async processQueue(sessionId: string): Promise<void> {
+    const queue = this.messageQueueBySession.get(sessionId);
+    if (!queue || queue.length === 0) return;
+
+    const next = queue.shift()!;
+    console.log(`[AgentManager] Processing queued message for session ${sessionId}, ${queue.length} remaining`);
+
+    // Emit status that we're processing a queued message
+    this.emitStatus({
+      type: 'queue_processing',
+      queuedMessage: next.message.slice(0, 100),
+      message: 'Processing queued message...',
+    });
+
+    try {
+      const result = await this.executeMessage(next.message, next.channel, sessionId);
+      next.resolve(result);
+    } catch (error) {
+      next.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  /**
+   * Actually execute a message (internal implementation)
+   */
+  private async executeMessage(
+    userMessage: string,
+    channel: string,
+    sessionId: string
+  ): Promise<ProcessResult> {
+    // Memory should already be checked by processMessage, but guard anyway
+    if (!this.memory) {
+      throw new Error('AgentManager not initialized - call initialize() first');
+    }
+
+    const memory = this.memory; // Local reference for TypeScript narrowing
 
     this.processingBySession.set(sessionId, true);
     const abortController = new AbortController();
@@ -170,15 +249,15 @@ class AgentManagerClass extends EventEmitter {
 
     try {
       const { maxContextTokens, compactionThreshold } = getTokenLimits();
-      const statsBefore = this.memory.getStats(sessionId);
+      const statsBefore = memory.getStats(sessionId);
       if (statsBefore.estimatedTokens > compactionThreshold) {
         console.log('[AgentManager] Token limit approaching, running compaction...');
         await this.runCompaction(sessionId);
         wasCompacted = true;
       }
 
-      const context = await this.memory.getConversationContext(maxContextTokens, sessionId);
-      const factsContext = this.memory.getFactsForContext();
+      const context = await memory.getConversationContext(maxContextTokens, sessionId);
+      const factsContext = memory.getFactsForContext();
 
       console.log(`[AgentManager] Loaded ${context.messages.length} messages (${context.totalTokens} tokens)`);
 
@@ -236,14 +315,14 @@ class AgentManagerClass extends EventEmitter {
           ? userMessage.slice(0, -heartbeatSuffix.length)
           : userMessage;
 
-        this.memory.saveMessage('user', messageToSave, sessionId);
-        this.memory.saveMessage('assistant', response, sessionId);
+        memory.saveMessage('user', messageToSave, sessionId);
+        memory.saveMessage('assistant', response, sessionId);
         console.log('[AgentManager] Saved messages to SQLite (session: ' + sessionId + ')');
       }
 
       this.extractAndStoreFacts(userMessage);
 
-      const statsAfter = this.memory.getStats();
+      const statsAfter = memory.getStats();
 
       return {
         response,
@@ -262,21 +341,57 @@ class AgentManagerClass extends EventEmitter {
 
       // Only save user message if not aborted
       if (!abortController.signal.aborted) {
-        this.memory.saveMessage('user', userMessage, sessionId);
+        memory.saveMessage('user', userMessage, sessionId);
       }
 
       throw error;
     } finally {
       this.processingBySession.set(sessionId, false);
       this.abortControllersBySession.delete(sessionId);
+
+      // Process next message in queue (if any)
+      // Use setTimeout(0) to avoid blocking the current promise resolution
+      setTimeout(() => {
+        this.processQueue(sessionId).catch((err) => {
+          console.error('[AgentManager] Queue processing failed:', err);
+        });
+      }, 0);
+    }
+  }
+
+  /**
+   * Get the number of queued messages for a session
+   */
+  getQueueLength(sessionId: string = 'default'): number {
+    return this.messageQueueBySession.get(sessionId)?.length || 0;
+  }
+
+  /**
+   * Clear the message queue for a session
+   */
+  clearQueue(sessionId: string = 'default'): void {
+    const queue = this.messageQueueBySession.get(sessionId);
+    if (queue && queue.length > 0) {
+      // Reject all pending messages
+      for (const item of queue) {
+        item.reject(new Error('Queue cleared'));
+      }
+      queue.length = 0;
+      console.log(`[AgentManager] Queue cleared for session ${sessionId}`);
     }
   }
 
   /**
    * Stop the query for a specific session (or any running query if no sessionId)
+   * Also clears any queued messages for that session
    */
-  stopQuery(sessionId?: string): boolean {
+  stopQuery(sessionId?: string, clearQueuedMessages: boolean = true): boolean {
     if (sessionId) {
+      // Clear the queue first
+      if (clearQueuedMessages) {
+        this.clearQueue(sessionId);
+      }
+
       const abortController = this.abortControllersBySession.get(sessionId);
       if (this.processingBySession.get(sessionId) && abortController) {
         console.log(`[AgentManager] Stopping query for session ${sessionId}...`);
@@ -290,6 +405,9 @@ class AgentManagerClass extends EventEmitter {
     // Legacy: stop any running query (first one found)
     for (const [sid, isProcessing] of this.processingBySession.entries()) {
       if (isProcessing) {
+        if (clearQueuedMessages) {
+          this.clearQueue(sid);
+        }
         const abortController = this.abortControllersBySession.get(sid);
         if (abortController) {
           console.log(`[AgentManager] Stopping query for session ${sid}...`);

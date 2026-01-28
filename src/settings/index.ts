@@ -571,7 +571,10 @@ class SettingsManagerClass {
    * Set a setting value
    */
   set(key: string, value: string, encrypted?: boolean): void {
-    if (!this.db) throw new Error('Settings not initialized');
+    if (!this.db) {
+      console.warn('[Settings] Not initialized, cannot save:', key);
+      return;
+    }
 
     // Determine if should be encrypted
     const def = SETTINGS_SCHEMA.find(s => s.key === key);

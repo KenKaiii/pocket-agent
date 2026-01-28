@@ -513,6 +513,61 @@
       color: var(--error);
     }
 
+    /* Queued message state - greyed out until processing */
+    .message.queued {
+      opacity: 0.5;
+      filter: grayscale(30%);
+      transition: opacity 0.3s ease, filter 0.3s ease;
+    }
+
+    .message.queued::after {
+      content: 'queued';
+      position: absolute;
+      top: -8px;
+      right: 8px;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .message.user.queued {
+      position: relative;
+      box-shadow: none;
+    }
+
+    .message.user.queued:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Queue indicator in status */
+    .queue-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 4px 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+
+    .queue-indicator .queue-count {
+      background: var(--accent);
+      color: white;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 10px;
+    }
+
     /* Code blocks in messages */
     .message code {
       background: rgba(0, 0, 0, 0.3);
@@ -1271,6 +1326,7 @@
     let statusElBySession = new Map(); // Track status elements per session
     let currentSuggestion = null; // Stores the suggested prompt from the agent
     const ghostSuggestion = document.getElementById('ghost-suggestion');
+    let queuedMessageElements = new Map(); // Track queued message DOM elements by a unique ID
 
     // Session state
     const MAX_TABS = 5;
@@ -1791,6 +1847,11 @@
           statusElBySession.delete(sessionId);
         }
 
+        // Remove 'queued' class from any queued messages and clear tracking
+        const queuedMsgs = messagesDiv.querySelectorAll('.message.queued');
+        queuedMsgs.forEach(msg => msg.classList.remove('queued'));
+        queuedMessageElements.clear();
+
         addMessage('system', 'Query stopped.');
 
         isLoadingBySession.set(sessionId, false);
@@ -1808,59 +1869,93 @@
       const attachments = [...pendingAttachments];
       const sessionId = currentSessionId; // Capture session at start
 
-      if ((!message && attachments.length === 0) || isLoadingBySession.get(sessionId)) return;
+      if (!message && attachments.length === 0) return;
 
       // Clear empty state if present
       const emptyState = messagesDiv.querySelector('.empty-state');
       if (emptyState) emptyState.remove();
 
-      isLoadingBySession.set(sessionId, true);
-      renderTabs(); // Update tab loading indicator
-      setButtonState(true);
+      // Check if already processing - if so, message will be queued
+      const isQueued = isLoadingBySession.get(sessionId);
+      const messageId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+      // Always clear input immediately for responsive UX
       input.value = '';
       input.style.height = 'auto';
       clearSuggestion();
-
-      // Clear attachments
       clearAttachments();
 
-      // Show user message with attachments
-      addMessage('user', message, true, attachments);
-      const statusEl = addStatusIndicator('hmm let me think 🤔');
-      statusElBySession.set(sessionId, statusEl);
+      // Show user message - mark as queued if there's already a message processing
+      const userMsgEl = addMessage('user', message, true, attachments);
+      if (isQueued) {
+        userMsgEl.classList.add('queued');
+        userMsgEl.dataset.messageId = messageId;
+        queuedMessageElements.set(messageId, userMsgEl);
+      }
+
+      // If not already processing, show status indicator and set loading state
+      if (!isQueued) {
+        isLoadingBySession.set(sessionId, true);
+        renderTabs();
+        setButtonState(true);
+        const statusEl = addStatusIndicator('hmm let me think 🤔');
+        statusElBySession.set(sessionId, statusEl);
+      }
+
       scrollToBottom();
 
       // Build the full message with attachments
       const fullMessage = await buildMessageWithAttachments(message, attachments);
 
-      // Set up status listener for this session
-      const statusCleanup = window.pocketAgent.onStatus((status) => {
-        // Only update status if we're still on the same session
-        if (currentSessionId === sessionId) {
-          updateStatusIndicator(status, sessionId);
-        }
-      });
-      statusCleanupBySession.set(sessionId, statusCleanup);
+      // Set up status listener for this session (only if not already set up)
+      if (!statusCleanupBySession.has(sessionId)) {
+        const statusCleanup = window.pocketAgent.onStatus((status) => {
+          // Only update status if we're still on the same session
+          if (currentSessionId === sessionId) {
+            updateStatusIndicator(status, sessionId);
+          }
+        });
+        statusCleanupBySession.set(sessionId, statusCleanup);
+      }
 
       try {
+        // This will resolve when the message is actually processed (not when queued)
         const result = await window.pocketAgent.send(fullMessage, sessionId);
 
-        // Clean up status listener
-        const cleanup = statusCleanupBySession.get(sessionId);
-        if (cleanup) {
-          cleanup();
-          statusCleanupBySession.delete(sessionId);
-        }
-
-        // Remove status indicator (only if still on this session)
-        const currentStatusEl = statusElBySession.get(sessionId);
-        if (currentStatusEl) {
-          currentStatusEl.remove();
-          statusElBySession.delete(sessionId);
+        // If this message was queued, remove the queued state
+        if (queuedMessageElements.has(messageId)) {
+          const msgEl = queuedMessageElements.get(messageId);
+          if (msgEl) {
+            msgEl.classList.remove('queued');
+          }
+          queuedMessageElements.delete(messageId);
         }
 
         // Only update UI if still on same session
         if (currentSessionId === sessionId) {
+          // Check if there are more queued messages - if not, clean up
+          const hasMoreQueued = queuedMessageElements.size > 0;
+
+          if (!hasMoreQueued) {
+            // Clean up status listener
+            const cleanup = statusCleanupBySession.get(sessionId);
+            if (cleanup) {
+              cleanup();
+              statusCleanupBySession.delete(sessionId);
+            }
+
+            // Remove status indicator
+            const currentStatusEl = statusElBySession.get(sessionId);
+            if (currentStatusEl) {
+              currentStatusEl.remove();
+              statusElBySession.delete(sessionId);
+            }
+
+            isLoadingBySession.set(sessionId, false);
+            renderTabs();
+            setButtonState(false);
+          }
+
           if (result.success) {
             addMessage('assistant', result.response);
 
@@ -1873,35 +1968,49 @@
           }
 
           updateStats();
+          scrollToBottom();
         }
       } catch (err) {
-        // Clean up status listener
-        const cleanup = statusCleanupBySession.get(sessionId);
-        if (cleanup) {
-          cleanup();
-          statusCleanupBySession.delete(sessionId);
+        // If this message was queued, remove the queued state
+        if (queuedMessageElements.has(messageId)) {
+          const msgEl = queuedMessageElements.get(messageId);
+          if (msgEl) {
+            msgEl.classList.remove('queued');
+          }
+          queuedMessageElements.delete(messageId);
         }
 
-        const currentStatusEl = statusElBySession.get(sessionId);
-        if (currentStatusEl) {
-          currentStatusEl.remove();
-          statusElBySession.delete(sessionId);
+        // Check if there are more queued messages
+        const hasMoreQueued = queuedMessageElements.size > 0;
+
+        if (!hasMoreQueued) {
+          // Clean up status listener
+          const cleanup = statusCleanupBySession.get(sessionId);
+          if (cleanup) {
+            cleanup();
+            statusCleanupBySession.delete(sessionId);
+          }
+
+          const currentStatusEl = statusElBySession.get(sessionId);
+          if (currentStatusEl) {
+            currentStatusEl.remove();
+            statusElBySession.delete(sessionId);
+          }
+
+          isLoadingBySession.set(sessionId, false);
+          renderTabs();
+          setButtonState(false);
         }
 
-        // Only show error if still on same session and not stopped
-        if (currentSessionId === sessionId && !err.message?.includes('stopped')) {
+        // Only show error if still on same session and not stopped/cleared
+        if (currentSessionId === sessionId && !err.message?.includes('stopped') && !err.message?.includes('cleared')) {
           addMessage('error', err.message || 'Something went wrong');
         }
+
+        scrollToBottom();
       }
 
-      isLoadingBySession.set(sessionId, false);
-      renderTabs(); // Update tab loading indicator
-      // Only update button state if still on same session
-      if (currentSessionId === sessionId) {
-        setButtonState(false);
-        scrollToBottom();
-        input.focus();
-      }
+      input.focus();
     }
 
     async function buildMessageWithAttachments(message, attachments) {
@@ -2011,7 +2120,13 @@
       timestampDiv.textContent = formatTimestamp(ts);
       div.appendChild(timestampDiv);
 
-      messagesDiv.appendChild(div);
+      // Insert before status indicator if one exists (keeps indicator at bottom)
+      const statusIndicator = messagesDiv.querySelector('.status-indicator');
+      if (statusIndicator) {
+        messagesDiv.insertBefore(div, statusIndicator);
+      } else {
+        messagesDiv.appendChild(div);
+      }
       return div;
     }
 
@@ -2138,6 +2253,35 @@
         detailEl.textContent = '';
         detailEl.style.display = 'none';
         statusEl.classList.remove('subagent-active');
+      } else if (status.type === 'queued') {
+        // Message was queued - show queue position
+        actionEl.textContent = status.message || 'message queued 📋';
+        if (status.queuePosition) {
+          detailEl.textContent = `Position #${status.queuePosition} in queue`;
+          detailEl.style.display = 'block';
+        } else {
+          detailEl.textContent = '';
+          detailEl.style.display = 'none';
+        }
+        statusEl.classList.remove('subagent-active');
+      } else if (status.type === 'queue_processing') {
+        // Now processing a queued message
+        actionEl.textContent = status.message || 'processing queued message... 🔄';
+        if (status.queuedMessage) {
+          detailEl.textContent = status.queuedMessage;
+          detailEl.title = status.queuedMessage;
+          detailEl.style.display = 'block';
+        } else {
+          detailEl.textContent = '';
+          detailEl.style.display = 'none';
+        }
+        statusEl.classList.remove('subagent-active');
+
+        // Remove 'queued' class from the oldest queued message since it's now processing
+        const queuedMsgs = messagesDiv.querySelectorAll('.message.queued');
+        if (queuedMsgs.length > 0) {
+          queuedMsgs[0].classList.remove('queued');
+        }
       }
 
       scrollToBottom();
