@@ -1,4 +1,4 @@
-import { app, Tray, Menu, nativeImage, BrowserWindow, ipcMain, Notification, globalShortcut } from 'electron';
+import { app, Tray, Menu, nativeImage, BrowserWindow, ipcMain, Notification, globalShortcut, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { spawn, ChildProcess } from 'child_process';
@@ -1066,6 +1066,10 @@ function setupIPC(): void {
 
   ipcMain.handle('app:openRoutines', async () => {
     openCronWindow();
+  });
+
+  ipcMain.handle('app:openExternal', async (_, url: string) => {
+    await shell.openExternal(url);
   });
 
   // Customize - Identity

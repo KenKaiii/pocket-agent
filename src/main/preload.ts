@@ -50,6 +50,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   openSoul: () => ipcRenderer.invoke('app:openSoul'),
   openCustomize: () => ipcRenderer.invoke('app:openCustomize'),
   openRoutines: () => ipcRenderer.invoke('app:openRoutines'),
+  openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
 
   // Customize
   getIdentity: () => ipcRenderer.invoke('customize:getIdentity'),
@@ -165,6 +166,7 @@ declare global {
       openSoul: () => Promise<void>;
       openCustomize: () => Promise<void>;
       openRoutines: () => Promise<void>;
+      openExternal: (url: string) => Promise<void>;
       // Customize
       getIdentity: () => Promise<string>;
       saveIdentity: (content: string) => Promise<{ success: boolean }>;
