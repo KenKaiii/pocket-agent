@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
-  <title>Settings - Pocket Agent</title>
+  <title>Settings</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -816,7 +816,7 @@
 </head>
 <body>
   <header>
-    <h1><span>Tweaks</span></h1>
+    <h1><span>Settings</span></h1>
     <div class="header-actions">
       <button class="secondary" onclick="window.close()">Done</button>
       <button id="reboot-btn" class="reboot" onclick="restartAgent()" disabled>Reboot</button>
@@ -848,6 +848,10 @@
       <div class="nav-item" data-section="skills">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
         Superpowers
+      </div>
+      <div class="nav-item" data-section="updates">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+        Updates
       </div>
     </nav>
 
@@ -1097,6 +1101,52 @@
           </div>
         </div>
       </section>
+
+      <!-- Updates Section -->
+      <section id="updates" class="section">
+        <h2 class="section-title">Updates</h2>
+        <p class="section-desc">Keep your agent fresh with the latest features.</p>
+
+        <div class="settings-grid">
+          <div class="setting-row">
+            <label>Auto-check for updates</label>
+            <div class="toggle" id="updates.autoCheck-toggle" onclick="toggleSetting('updates.autoCheck')"></div>
+          </div>
+        </div>
+
+        <div class="settings-grid" style="margin-top: 12px;">
+          <div class="setting-row">
+            <label>Current Version</label>
+            <span id="current-version" class="key-link" style="font-size: 12px;">Loading...</span>
+          </div>
+          <div class="setting-row">
+            <label>Status</label>
+            <div id="update-status" class="status info" style="margin: 0;">Ready</div>
+          </div>
+          <div class="setting-row" id="update-progress-row" style="display: none;">
+            <label>Progress</label>
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1; max-width: 200px;">
+              <div style="flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;">
+                <div id="update-progress-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+              </div>
+              <span id="update-progress-text" style="font-size: 11px; color: var(--text-muted);">0%</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <label>Actions</label>
+            <div style="display: flex; gap: 6px;">
+              <button id="check-updates-btn" onclick="checkForUpdates()" class="skills-setup-btn" style="margin: 0;">Check Now</button>
+              <button id="download-update-btn" onclick="downloadUpdate()" class="skills-setup-btn" style="margin: 0; display: none;">Download</button>
+              <button id="install-update-btn" onclick="installUpdate()" class="skills-setup-btn" style="margin: 0; display: none; background: var(--accent); color: white; border-color: var(--accent);">Install & Restart</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="update-info" class="info-box" style="margin-top: 12px; display: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span id="update-info-text">New version available!</span>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -1109,10 +1159,20 @@
     // Initialize
     window.addEventListener('DOMContentLoaded', async () => {
       await loadSettings();
+      await loadAppVersion();
       setupNavigation();
       setupAutoSave();
       loadSkillsSummary();
     });
+
+    async function loadAppVersion() {
+      try {
+        const version = await window.pocketAgent.getAppVersion();
+        document.getElementById('current-version').textContent = `v${version}`;
+      } catch (err) {
+        console.error('Failed to load app version:', err);
+      }
+    }
 
     async function loadSettings() {
       try {
@@ -1152,6 +1212,11 @@
       const browserEnabled = settings['browser.enabled'] === 'true';
       browserToggle.classList.toggle('active', browserEnabled);
       document.getElementById('browser-config').style.opacity = browserEnabled ? '1' : '0.5';
+
+      // Updates auto-check toggle (defaults to true)
+      const updatesToggle = document.getElementById('updates.autoCheck-toggle');
+      const updatesEnabled = settings['updates.autoCheck'] !== 'false';
+      updatesToggle.classList.toggle('active', updatesEnabled);
     }
 
     function setupNavigation() {
@@ -1627,6 +1692,156 @@
         showToast('Failed to open Skills Setup: ' + err.message, 'error');
       }
     }
+
+    // Updates functions
+    let updateStatusCleanup = null;
+
+    async function initializeUpdates() {
+      // Set up status listener
+      if (updateStatusCleanup) updateStatusCleanup();
+      updateStatusCleanup = window.pocketAgent.onUpdateStatus(handleUpdateStatus);
+
+      // Get initial status
+      try {
+        const status = await window.pocketAgent.getUpdateStatus();
+        handleUpdateStatus(status);
+      } catch (err) {
+        console.error('Failed to get update status:', err);
+      }
+    }
+
+    function handleUpdateStatus(status) {
+      const statusEl = document.getElementById('update-status');
+      const progressRow = document.getElementById('update-progress-row');
+      const progressBar = document.getElementById('update-progress-bar');
+      const progressText = document.getElementById('update-progress-text');
+      const checkBtn = document.getElementById('check-updates-btn');
+      const downloadBtn = document.getElementById('download-update-btn');
+      const installBtn = document.getElementById('install-update-btn');
+      const infoBox = document.getElementById('update-info');
+      const infoText = document.getElementById('update-info-text');
+
+      // Reset visibility
+      progressRow.style.display = 'none';
+      downloadBtn.style.display = 'none';
+      installBtn.style.display = 'none';
+      infoBox.style.display = 'none';
+      checkBtn.disabled = false;
+      checkBtn.textContent = 'Check Now';
+
+      switch (status.status) {
+        case 'idle':
+          statusEl.className = 'status info';
+          statusEl.textContent = 'Ready';
+          break;
+
+        case 'dev-mode':
+          statusEl.className = 'status warning';
+          statusEl.textContent = 'Dev mode';
+          checkBtn.disabled = true;
+          checkBtn.textContent = 'Dev mode';
+          infoBox.style.display = 'flex';
+          infoText.textContent = 'Auto-updates only work in the packaged app.';
+          break;
+
+        case 'checking':
+          statusEl.className = 'status info';
+          statusEl.textContent = 'Checking...';
+          checkBtn.disabled = true;
+          checkBtn.textContent = 'Checking...';
+          break;
+
+        case 'available':
+          statusEl.className = 'status success';
+          statusEl.textContent = 'Update available!';
+          downloadBtn.style.display = 'inline-block';
+          infoBox.style.display = 'flex';
+          infoText.textContent = `Version ${status.info?.version || 'unknown'} is available for download.`;
+          break;
+
+        case 'not-available':
+          statusEl.className = 'status success';
+          statusEl.textContent = 'Up to date';
+          break;
+
+        case 'downloading':
+          statusEl.className = 'status info';
+          statusEl.textContent = 'Downloading...';
+          progressRow.style.display = 'flex';
+          const percent = status.progress?.percent || 0;
+          progressBar.style.width = `${percent}%`;
+          progressText.textContent = `${Math.round(percent)}%`;
+          checkBtn.disabled = true;
+          break;
+
+        case 'downloaded':
+          statusEl.className = 'status success';
+          statusEl.textContent = 'Ready to install';
+          installBtn.style.display = 'inline-block';
+          infoBox.style.display = 'flex';
+          infoText.textContent = `Version ${status.info?.version || 'unknown'} is ready to install. Click "Install & Restart" to update.`;
+          break;
+
+        case 'error':
+          statusEl.className = 'status error';
+          statusEl.textContent = 'Error';
+          infoBox.style.display = 'flex';
+          infoText.textContent = status.error || 'An error occurred while checking for updates.';
+          break;
+      }
+    }
+
+    async function checkForUpdates() {
+      const btn = document.getElementById('check-updates-btn');
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
+
+      try {
+        await window.pocketAgent.checkForUpdates();
+      } catch (err) {
+        showToast('Failed to check for updates: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Check Now';
+      }
+    }
+
+    async function downloadUpdate() {
+      const btn = document.getElementById('download-update-btn');
+      btn.disabled = true;
+      btn.textContent = 'Starting...';
+
+      try {
+        const result = await window.pocketAgent.downloadUpdate();
+        if (!result.success) {
+          showToast(result.error || 'Download failed', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to download update: ' + err.message, 'error');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Download';
+    }
+
+    async function installUpdate() {
+      const btn = document.getElementById('install-update-btn');
+      btn.disabled = true;
+      btn.textContent = 'Installing...';
+
+      try {
+        await window.pocketAgent.installUpdate();
+        // App will restart, so this won't return
+      } catch (err) {
+        showToast('Failed to install update: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Install & Restart';
+      }
+    }
+
+    // Initialize updates when DOM is ready
+    window.addEventListener('DOMContentLoaded', () => {
+      initializeUpdates();
+    });
   </script>
 </body>
 </html>
