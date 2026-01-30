@@ -802,6 +802,148 @@
       font-size: 11px;
       color: var(--text-muted);
     }
+
+    /* API Key Modal */
+    .api-key-modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      width: 90%;
+      max-width: 360px;
+      animation: modalIn 0.2s ease;
+    }
+
+    .api-key-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .api-key-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .api-key-title h2 {
+      font-family: 'Pixelify Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .api-key-title p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .api-key-body {
+      padding: 14px;
+    }
+
+    .api-key-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .api-key-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .api-key-item label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .api-key-item label a {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .api-key-item label a:hover {
+      color: var(--accent);
+    }
+
+    .api-key-item input {
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: 'SF Mono', monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .api-key-item input:focus {
+      border-color: var(--accent);
+    }
+
+    .api-key-item input::placeholder {
+      color: var(--text-muted);
+      font-family: inherit;
+    }
+
+    .api-key-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .api-key-buttons button {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .api-key-buttons .btn-cancel {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .api-key-buttons .btn-cancel:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .api-key-buttons .btn-save {
+      background: var(--accent);
+      color: white;
+      border: 1px solid var(--accent);
+    }
+
+    .api-key-buttons .btn-save:hover:not(:disabled) {
+      background: var(--accent-secondary);
+      border-color: var(--accent-secondary);
+    }
+
+    .api-key-buttons .btn-save:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -811,20 +953,45 @@
       <div class="stats" id="stats"></div>
     </div>
     <div class="header-actions">
-      <button onclick="window.close()">Done</button>
-      <button onclick="load()">Refresh</button>
-      <button class="primary" id="install-btn" onclick="installAll()" disabled>Power Up All</button>
+      <button onclick="playNormalClick(); window.close()">Done</button>
+      <button onclick="playNormalClick(); load()">Refresh</button>
+      <button class="primary" id="install-btn" onclick="playNormalClick(); installAll()" disabled>Power Up All</button>
     </div>
   </header>
 
   <div class="filters">
-    <button class="filter active" data-f="all" onclick="filter('all')">All</button>
-    <button class="filter" data-f="ready" onclick="filter('ready')">Unlocked</button>
-    <button class="filter" data-f="missing" onclick="filter('missing')">Locked</button>
+    <button class="filter active" data-f="all" onclick="playNormalClick(); filter('all')">All</button>
+    <button class="filter" data-f="ready" onclick="playNormalClick(); filter('ready')">Unlocked</button>
+    <button class="filter" data-f="missing" onclick="playNormalClick(); filter('missing')">Locked</button>
   </div>
 
   <div class="content" id="content">
     <div class="empty">scanning powers...</div>
+  </div>
+
+  <!-- API Key Modal -->
+  <div class="modal-overlay" id="api-key-modal">
+    <div class="api-key-modal">
+      <div class="api-key-header">
+        <div class="api-key-icon" id="api-key-icon">🔑</div>
+        <div class="api-key-title">
+          <h2 id="api-key-modal-title">Add API Key</h2>
+          <p id="api-key-modal-subtitle">Enter your API key to unlock this skill</p>
+        </div>
+        <button class="modal-close" onclick="playNormalClick(); closeApiKeyModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="api-key-body">
+        <div class="api-key-list" id="api-key-list"></div>
+        <div class="api-key-buttons">
+          <button class="btn-cancel" onclick="playNormalClick(); closeApiKeyModal()">Cancel</button>
+          <button class="btn-save" id="api-key-save-btn" onclick="playNormalClick(); saveApiKeys()">Save</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Setup Modal -->
@@ -836,7 +1003,7 @@
           <h2 id="modal-title">Setup</h2>
           <p id="modal-subtitle">Configure your skill</p>
         </div>
-        <button class="modal-close" onclick="closeSetupModal()">
+        <button class="modal-close" onclick="playNormalClick(); closeSetupModal()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
@@ -849,17 +1016,99 @@
     </div>
   </div>
 
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
   <script>
+    // Click sound
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .tab, .skill-card, select, .filter-btn')) {
+        playNormalClick();
+      }
+    });
+
     let data = [];
     let view = 'all';
     let installing = false;
 
     // Skills with setup configurations
-    const skillsWithSetup = ['gog', 'openhue', 'spotify-player', 'wacli'];
+    const skillsWithSetup = ['1password', 'gemini', 'gog', 'himalaya', 'notion', 'openhue', 'spotify-player', 'trello', 'wacli'];
+
+    // Mapping from environment variable names to settings keys
+    const envVarToSettingKey = {
+      'OPENAI_API_KEY': 'openai.apiKey',
+      'GEMINI_API_KEY': 'gemini.apiKey',
+      'GOOGLE_PLACES_API_KEY': 'google.placesApiKey',
+      'NOTION_API_KEY': 'notion.apiKey',
+      'TRELLO_API_KEY': 'trello.apiKey',
+      'TRELLO_TOKEN': 'trello.token',
+      'ELEVENLABS_API_KEY': 'elevenlabs.apiKey',
+      'ANTHROPIC_API_KEY': 'anthropic.apiKey',
+      'MOONSHOT_API_KEY': 'moonshot.apiKey',
+    };
+
+    // Info about API keys (label, placeholder, help URL)
+    const apiKeyInfo = {
+      'OPENAI_API_KEY': {
+        label: 'OpenAI API Key',
+        placeholder: 'sk-...',
+        url: 'https://platform.openai.com/api-keys'
+      },
+      'GEMINI_API_KEY': {
+        label: 'Gemini API Key',
+        placeholder: 'AI...',
+        url: 'https://aistudio.google.com/apikey'
+      },
+      'GOOGLE_PLACES_API_KEY': {
+        label: 'Google Places API Key',
+        placeholder: 'AIza...',
+        url: 'https://console.cloud.google.com/apis/credentials'
+      },
+      'NOTION_API_KEY': {
+        label: 'Notion API Key',
+        placeholder: 'secret_...',
+        url: 'https://www.notion.so/my-integrations'
+      },
+      'TRELLO_API_KEY': {
+        label: 'Trello API Key',
+        placeholder: '32 hex characters',
+        url: 'https://trello.com/power-ups/admin'
+      },
+      'TRELLO_TOKEN': {
+        label: 'Trello Token',
+        placeholder: '64 hex characters',
+        url: 'https://trello.com/power-ups/admin'
+      },
+      'ELEVENLABS_API_KEY': {
+        label: 'ElevenLabs API Key',
+        placeholder: 'Your API key',
+        url: 'https://elevenlabs.io/app/settings/api-keys'
+      },
+      'ANTHROPIC_API_KEY': {
+        label: 'Anthropic API Key',
+        placeholder: 'sk-ant-...',
+        url: 'https://console.anthropic.com/settings/keys'
+      },
+      'MOONSHOT_API_KEY': {
+        label: 'Moonshot API Key',
+        placeholder: 'Your API key',
+        url: 'https://platform.moonshot.cn'
+      },
+    };
+
+    // Current API key modal state
+    let currentApiKeySkill = null;
 
     const emojis = {
       '1password':'🔐','apple-notes':'📝','apple-reminders':'⏰','bear-notes':'🐻','bird':'🐦',
-      'blogwatcher':'📰','camsnap':'📷','coding-agent':'💻','discord':'🎮',
+      'blogwatcher':'📰','camsnap':'📷',
       'food-order':'🍕','gemini':'♊','gifgrep':'🎬','github':'🐙','gog':'📬','himalaya':'📧','imsg':'💬',
       'notion':'📔','obsidian':'💎','openhue':'💡','peekaboo':'👀','slack':'💼','sonoscli':'🔊',
       'spotify-player':'🎧','summarize':'📝','things-mac':'✅','tmux':'🖥️','trello':'📋',
@@ -874,8 +1123,6 @@
       'bird': 'Read and post on X/Twitter',
       'blogwatcher': 'Monitor blogs and RSS feeds for updates',
       'camsnap': 'Capture frames from your security cameras',
-      'coding-agent': 'Run other AI coding tools in the background',
-      'discord': 'Send messages and manage Discord servers',
       'food-order': 'Check your food delivery order status',
       'gemini': 'Chat with Google\'s Gemini AI',
       'gifgrep': 'Search and download GIFs from the web',
@@ -950,7 +1197,7 @@
           if (s.missingPermissions && s.missingPermissions.length) {
             if (depsHtml) depsHtml += ', ';
             depsHtml += s.missingPermissions.map(p =>
-              `<span class="perm-missing" onclick="openPermission('${esc(p)}')" title="Click to grant">${esc(p)}</span>`
+              `<span class="perm-missing" onclick="playNormalClick(); openPermission('${esc(p)}')" title="Click to grant">${esc(p)}</span>`
             ).join(', ');
             depsClass = 'missing';
           }
@@ -983,20 +1230,21 @@
 
           let btn = '';
           if (canInstall) {
-            btn = `<button id="btn-${s.name}" onclick="install('${s.name}')">Unlock</button>`;
+            btn = `<button id="btn-${s.name}" onclick="playNormalClick(); install('${s.name}')">Unlock</button>`;
           } else if (needsApiKey) {
-            btn = `<button id="btn-${s.name}" onclick="openSettings()">Add Key</button>`;
+            const envVarsJson = JSON.stringify(s.missingEnvVars).replace(/"/g, '&quot;');
+            btn = `<button id="btn-${s.name}" onclick="playNormalClick(); openApiKeyModal('${esc(s.name)}', ${envVarsJson})">Add Key</button>`;
           } else if (needsPermission) {
-            btn = `<button id="btn-${s.name}" onclick="openPermission('${s.missingPermissions[0]}')">Grant</button>`;
+            btn = `<button id="btn-${s.name}" onclick="playNormalClick(); openPermission('${s.missingPermissions[0]}')">Grant</button>`;
           } else if (s.available && hasSetupWizard) {
             // Show setup for available skills with setup wizards
-            btn = `<button id="btn-${s.name}" onclick="openSetup('${s.name}')">Setup</button>`;
+            btn = `<button id="btn-${s.name}" onclick="playNormalClick(); openSetup('${s.name}')">Setup</button>`;
           } else if (!s.available && s.osCompatible && hasSetupWizard && !hasMissingBins) {
             // Show setup button for skills that need setup (bins installed but not configured)
-            btn = `<button id="btn-${s.name}" class="primary" onclick="openSetup('${s.name}')">Setup</button>`;
+            btn = `<button id="btn-${s.name}" class="primary" onclick="playNormalClick(); openSetup('${s.name}')">Setup</button>`;
           } else if (canUninstall) {
             // Show × remove button for installed skills
-            btn = `<button id="rm-${s.name}" class="remove" onclick="uninstall('${s.name}')" title="Remove">×</button>`;
+            btn = `<button id="rm-${s.name}" class="remove" onclick="playNormalClick(); uninstall('${s.name}')" title="Remove">×</button>`;
           }
 
           const tip = descriptions[s.name] || '';
@@ -1247,6 +1495,140 @@
       }
     }
 
+    // API Key Modal Functions
+    function openApiKeyModal(skillName, missingEnvVars) {
+      currentApiKeySkill = { name: skillName, envVars: missingEnvVars };
+
+      // Update modal header
+      const emoji = emojis[skillName] || '🔑';
+      document.getElementById('api-key-icon').textContent = emoji;
+      document.getElementById('api-key-modal-title').textContent = `Unlock ${skillName}`;
+      document.getElementById('api-key-modal-subtitle').textContent =
+        missingEnvVars.length > 1 ? 'Enter your API keys' : 'Enter your API key';
+
+      // Build input fields for each missing env var
+      const listContainer = document.getElementById('api-key-list');
+      listContainer.innerHTML = missingEnvVars.map(envVar => {
+        const info = apiKeyInfo[envVar] || {
+          label: envVar,
+          placeholder: 'Your API key',
+          url: null
+        };
+        const urlHtml = info.url
+          ? `<a href="${esc(info.url)}" target="_blank">Get key</a>`
+          : '';
+        return `
+          <div class="api-key-item">
+            <label>
+              ${esc(info.label)}
+              ${urlHtml}
+            </label>
+            <input type="password" id="api-key-input-${esc(envVar)}"
+              placeholder="${esc(info.placeholder)}"
+              data-env-var="${esc(envVar)}">
+          </div>
+        `;
+      }).join('');
+
+      // Show modal
+      document.getElementById('api-key-modal').classList.add('show');
+
+      // Focus first input
+      setTimeout(() => {
+        const firstInput = listContainer.querySelector('input');
+        if (firstInput) firstInput.focus();
+      }, 100);
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('api-key-modal').classList.remove('show');
+      currentApiKeySkill = null;
+    }
+
+    async function saveApiKeys() {
+      if (!currentApiKeySkill) return;
+
+      const saveBtn = document.getElementById('api-key-save-btn');
+      const envVars = currentApiKeySkill.envVars;
+      const skillName = currentApiKeySkill.name;
+
+      // Collect values from inputs
+      const values = {};
+      let hasEmpty = false;
+      for (const envVar of envVars) {
+        const input = document.getElementById(`api-key-input-${envVar}`);
+        const value = input ? input.value.trim() : '';
+        if (!value) {
+          hasEmpty = true;
+        }
+        values[envVar] = value;
+      }
+
+      if (hasEmpty) {
+        toast('Please fill in all fields', 'error');
+        return;
+      }
+
+      // Disable button and show loading
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="spinner-sm"></span>';
+
+      try {
+        // Save each API key
+        for (const [envVar, value] of Object.entries(values)) {
+          const settingKey = envVarToSettingKey[envVar];
+          if (settingKey) {
+            await window.pocketAgent.setSetting(settingKey, value);
+          }
+        }
+
+        toast('API key saved!', 'success');
+        closeApiKeyModal();
+
+        // Refresh skills status to check if skill is now available
+        await refreshSkillStatus(skillName);
+
+      } catch (e) {
+        console.error('Failed to save API key:', e);
+        toast('Failed to save key', 'error');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    }
+
+    async function refreshSkillStatus(skillName) {
+      try {
+        const r = await window.pocketAgent.getSkillsStatus();
+        data = r.skills;
+
+        // Find the skill and check if it's now available
+        const skill = data.find(s => s.name === skillName);
+        if (skill && skill.available) {
+          // Update the row
+          updateRowStatus(skillName, true);
+
+          // Update the button to show it's unlocked
+          const btn = document.getElementById(`btn-${skillName}`);
+          if (btn) {
+            btn.className = 'done';
+            btn.disabled = true;
+            btn.textContent = '✓ Unlocked';
+            btn.onclick = null;
+          }
+        }
+
+        // Update stats
+        document.getElementById('stats').innerHTML =
+          `<span class="ready">${r.summary.available} unlocked</span><span class="missing">${r.summary.unavailable} locked</span>`;
+        document.getElementById('install-btn').disabled = r.summary.unavailable === 0 || installing;
+
+        // Re-render to update everything
+        render();
+      } catch (e) {
+        console.error('Failed to refresh skill status:', e);
+      }
+    }
+
     async function openPermission(permType) {
       try {
         await window.pocketAgent.openPermissionSettings(permType);
@@ -1386,7 +1768,7 @@
             <div class="key-input">
               <input type="text" id="file-path-display" readonly placeholder="No file selected"
                 value="${esc(setupInputValues['file_path'] || '')}">
-              <button type="button" onclick="selectFile('${esc(fileType)}')">Browse...</button>
+              <button type="button" onclick="playNormalClick(); selectFile('${esc(fileType)}')">Browse...</button>
             </div>
           </div>
           <div class="setup-status info" id="step-status" style="display: ${setupInputValues['file_path'] ? 'none' : 'flex'};">
@@ -1416,8 +1798,8 @@
           ${inputsHtml}
           ${actionHtml}
           <div class="setup-buttons">
-            ${index > 0 ? '<button class="btn-secondary" onclick="prevSetupStep()">Back</button>' : '<button class="btn-secondary" onclick="closeSetupModal()">Cancel</button>'}
-            <button class="btn-primary" id="next-btn" onclick="executeSetupStep()">
+            ${index > 0 ? '<button class="btn-secondary" onclick="prevSetupStep()">Back</button>' : '<button class="btn-secondary" onclick="playNormalClick(); closeSetupModal()">Cancel</button>'}
+            <button class="btn-primary" id="next-btn" onclick="playNormalClick(); executeSetupStep()">
               ${step.action === 'info' ? 'Next' : step.verify ? 'Verify' : 'Run'}
             </button>
           </div>
@@ -1577,7 +1959,7 @@
           <h3>${currentSetup.title} ready!</h3>
           <p>${currentSetup.skillName} configured</p>
           <div class="setup-buttons" style="margin-top: 16px;">
-            <button class="btn-primary" onclick="closeSetupModal()">Done</button>
+            <button class="btn-primary" onclick="playNormalClick(); closeSetupModal()">Done</button>
           </div>
         </div>
       `;

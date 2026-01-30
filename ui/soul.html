@@ -350,8 +350,8 @@
       <span class="aspect-count" id="aspect-count"></span>
     </div>
     <div class="header-actions">
-      <button onclick="window.close()">Done</button>
-      <button onclick="loadAspects()">Refresh</button>
+      <button onclick="playNormalClick(); window.close()">Done</button>
+      <button onclick="playNormalClick(); loadAspects()">Refresh</button>
     </div>
   </header>
 
@@ -359,7 +359,24 @@
     <!-- Cards will be inserted here -->
   </div>
 
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
   <script>
+    // Click sound
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .tab, select, .aspect-card')) {
+        playNormalClick();
+      }
+    });
+
     async function loadAspects() {
       try {
         const aspects = await window.pocketAgent.listSoulAspects();
@@ -390,7 +407,7 @@
           <div class="aspect-card" data-id="${a.id}">
             <div class="aspect-header">
               <span class="aspect-name">${escapeHtml(formatAspectName(a.aspect))}</span>
-              <button class="delete-btn" onclick="deleteAspect(${a.id})" title="Remove this">
+              <button class="delete-btn" onclick="playNormalClick(); deleteAspect(${a.id})" title="Remove this">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>

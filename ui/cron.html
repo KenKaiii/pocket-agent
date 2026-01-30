@@ -656,7 +656,7 @@
   <header>
     <h1><span>Routines</span></h1>
     <div class="header-actions">
-      <button onclick="window.close()">Done</button>
+      <button onclick="playNormalClick(); window.close()">Done</button>
     </div>
   </header>
 
@@ -762,7 +762,7 @@
 
         <div class="setting-row">
           <label></label>
-          <button class="create-btn" onclick="createJob()">
+          <button class="create-btn" onclick="playNormalClick(); createJob()">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -791,7 +791,24 @@
     </section>
   </main>
 
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
   <script>
+    // Click sound
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .tab, .day-btn, select, .routine-item')) {
+        playNormalClick();
+      }
+    });
+
     // Generate hour options (1-12)
     function generateHourOptions() {
       let html = '';
@@ -1056,18 +1073,18 @@
               <div class="job-prompt">${escapeHtml(job.prompt)}</div>
             </div>
             <div class="job-actions">
-              <button class="icon-btn" onclick="toggleJob('${escapeAttr(job.name)}', ${!job.enabled})" title="${job.enabled ? 'Pause' : 'Resume'}">
+              <button class="icon-btn" onclick="playNormalClick(); toggleJob('${escapeAttr(job.name)}', ${!job.enabled})" title="${job.enabled ? 'Pause' : 'Resume'}">
                 ${job.enabled
                   ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
                   : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
                 }
               </button>
-              <button class="icon-btn" onclick="runJob('${escapeAttr(job.name)}')" title="Test run">
+              <button class="icon-btn" onclick="playNormalClick(); runJob('${escapeAttr(job.name)}')" title="Test run">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M9 3h6v5l3 9H6l3-9V3z"/><path d="M9 3h6"/><path d="M10 12h4"/>
                 </svg>
               </button>
-              <button class="icon-btn danger" onclick="deleteJob('${escapeAttr(job.name)}')" title="Delete">
+              <button class="icon-btn danger" onclick="playNormalClick(); deleteJob('${escapeAttr(job.name)}')" title="Delete">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                 </svg>

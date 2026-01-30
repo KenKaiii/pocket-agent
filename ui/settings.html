@@ -945,8 +945,8 @@
   <header>
     <h1><span>Settings</span></h1>
     <div class="header-actions">
-      <button class="secondary" onclick="window.close()">Done</button>
-      <button id="reboot-btn" class="reboot" onclick="restartAgent()" disabled>Reboot</button>
+      <button class="secondary" onclick="playNormalClick(); window.close()">Done</button>
+      <button id="reboot-btn" class="reboot" onclick="playNormalClick(); restartAgent()" disabled>Reboot</button>
     </div>
   </header>
 
@@ -995,13 +995,13 @@
               <span class="auth-option-title">Login with Claude</span>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span id="auth-status" class="auth-badge loading">checking...</span>
-                <button id="oauth-btn" class="oauth-btn" onclick="handleAuthAction()">Sign in</button>
+                <button id="oauth-btn" class="oauth-btn" onclick="playNormalClick(); handleAuthAction()">Sign in</button>
               </div>
             </div>
             <div id="oauth-code-section" style="display: none; margin-top: 10px;">
               <div class="key-input">
                 <input type="text" id="oauth-code" placeholder="Paste authorization code...">
-                <button onclick="completeOAuth()">Submit</button>
+                <button onclick="playNormalClick(); completeOAuth()">Submit</button>
               </div>
             </div>
           </div>
@@ -1015,8 +1015,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="auth-api-key" placeholder="sk-ant-...">
-              <button class="delete-btn" id="auth-api-key-delete" onclick="deleteKey('anthropic.apiKey', 'auth-api-key')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="saveApiKey()">Save</button>
+              <button class="delete-btn" id="auth-api-key-delete" onclick="playNormalClick(); deleteKey('anthropic.apiKey', 'auth-api-key')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); saveApiKey()">Save</button>
             </div>
           </div>
         </div>
@@ -1030,8 +1030,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="moonshot.apiKey" placeholder="sk-...">
-              <button class="delete-btn" id="moonshot.apiKey-delete" onclick="deleteKey('moonshot.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="validateKey('moonshot')">Test</button>
+              <button class="delete-btn" id="moonshot.apiKey-delete" onclick="playNormalClick(); deleteKey('moonshot.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); validateKey('moonshot')">Test</button>
             </div>
           </div>
         </div>
@@ -1071,8 +1071,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="anthropic.apiKey" placeholder="sk-ant-...">
-              <button class="delete-btn" id="anthropic.apiKey-delete" onclick="deleteKey('anthropic.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="validateKey('anthropic')">Test</button>
+              <button class="delete-btn" id="anthropic.apiKey-delete" onclick="playNormalClick(); deleteKey('anthropic.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); validateKey('anthropic')">Test</button>
             </div>
           </div>
 
@@ -1083,8 +1083,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="openai.apiKey" placeholder="sk-...">
-              <button class="delete-btn" id="openai.apiKey-delete" onclick="deleteKey('openai.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="validateKey('openai')">Test</button>
+              <button class="delete-btn" id="openai.apiKey-delete" onclick="playNormalClick(); deleteKey('openai.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); validateKey('openai')">Test</button>
             </div>
           </div>
 
@@ -1095,8 +1095,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="gemini.apiKey" placeholder="AI...">
-              <button class="delete-btn" id="gemini.apiKey-delete" onclick="deleteKey('gemini.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="saveKey('gemini.apiKey')">Save</button>
+              <button class="delete-btn" id="gemini.apiKey-delete" onclick="playNormalClick(); deleteKey('gemini.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); saveKey('gemini.apiKey')">Save</button>
             </div>
           </div>
 
@@ -1107,8 +1107,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="google.placesApiKey" placeholder="AIza...">
-              <button class="delete-btn" id="google.placesApiKey-delete" onclick="deleteKey('google.placesApiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="saveKey('google.placesApiKey')">Save</button>
+              <button class="delete-btn" id="google.placesApiKey-delete" onclick="playNormalClick(); deleteKey('google.placesApiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); saveKey('google.placesApiKey')">Save</button>
             </div>
           </div>
 
@@ -1119,8 +1119,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="notion.apiKey" placeholder="secret_...">
-              <button class="delete-btn" id="notion.apiKey-delete" onclick="deleteKey('notion.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="saveKey('notion.apiKey')">Save</button>
+              <button class="delete-btn" id="notion.apiKey-delete" onclick="playNormalClick(); deleteKey('notion.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); saveKey('notion.apiKey')">Save</button>
             </div>
           </div>
 
@@ -1132,8 +1132,8 @@
             <div class="key-input">
               <input type="password" id="trello.apiKey" placeholder="API Key">
               <input type="password" id="trello.token" placeholder="Token" style="margin-left: 4px;">
-              <button class="delete-btn" id="trello-delete" onclick="deleteTrelloKeys()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="saveTrelloKeys()">Save</button>
+              <button class="delete-btn" id="trello-delete" onclick="playNormalClick(); deleteTrelloKeys()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); saveTrelloKeys()">Save</button>
             </div>
           </div>
 
@@ -1144,8 +1144,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="elevenlabs.apiKey" placeholder="Your API key">
-              <button class="delete-btn" id="elevenlabs.apiKey-delete" onclick="deleteKey('elevenlabs.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="saveKey('elevenlabs.apiKey')">Save</button>
+              <button class="delete-btn" id="elevenlabs.apiKey-delete" onclick="playNormalClick(); deleteKey('elevenlabs.apiKey')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); saveKey('elevenlabs.apiKey')">Save</button>
             </div>
           </div>
         </div>
@@ -1159,7 +1159,7 @@
         <div class="settings-grid">
           <div class="setting-row">
             <label>Enable Telegram</label>
-            <div class="toggle" id="telegram.enabled-toggle" onclick="toggleSetting('telegram.enabled')"></div>
+            <div class="toggle" id="telegram.enabled-toggle" onclick="playNormalClick(); toggleSetting('telegram.enabled')"></div>
           </div>
         </div>
 
@@ -1171,8 +1171,8 @@
             </div>
             <div class="key-input">
               <input type="password" id="telegram.botToken" placeholder="123456:ABC-DEF...">
-              <button class="delete-btn" id="telegram.botToken-delete" onclick="deleteKey('telegram.botToken')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-              <button onclick="validateKey('telegram')">Test</button>
+              <button class="delete-btn" id="telegram.botToken-delete" onclick="playNormalClick(); deleteKey('telegram.botToken')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+              <button onclick="playNormalClick(); validateKey('telegram')">Test</button>
             </div>
           </div>
           <div class="setting-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
@@ -1182,14 +1182,14 @@
             </div>
             <div class="key-input">
               <input type="text" id="telegram.allowedUserIds" placeholder="e.g. 918273645">
-              <button onclick="saveTelegramSetting('telegram.allowedUserIds')">Save</button>
+              <button onclick="playNormalClick(); saveTelegramSetting('telegram.allowedUserIds')">Save</button>
             </div>
           </div>
           <div class="setting-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
             <label>Default Chat</label>
             <div class="key-input">
               <input type="text" id="telegram.defaultChatId" placeholder="e.g. -100123456789">
-              <button onclick="saveTelegramSetting('telegram.defaultChatId')">Save</button>
+              <button onclick="playNormalClick(); saveTelegramSetting('telegram.defaultChatId')">Save</button>
             </div>
           </div>
         </div>
@@ -1235,7 +1235,7 @@
         <div class="settings-grid">
           <div class="setting-row">
             <label>Enable Browser</label>
-            <div class="toggle" id="browser.enabled-toggle" onclick="toggleSetting('browser.enabled')"></div>
+            <div class="toggle" id="browser.enabled-toggle" onclick="playNormalClick(); toggleSetting('browser.enabled')"></div>
           </div>
         </div>
 
@@ -1259,7 +1259,7 @@
           </div>
           <div class="setting-row">
             <label>Configure</label>
-            <button onclick="openSkillsSetup()" class="skills-setup-btn" style="margin: 0;">Open Skills Lab</button>
+            <button onclick="playNormalClick(); openSkillsSetup()" class="skills-setup-btn" style="margin: 0;">Open Skills Lab</button>
           </div>
         </div>
       </section>
@@ -1272,7 +1272,7 @@
         <div class="settings-grid">
           <div class="setting-row">
             <label>Auto-check for updates</label>
-            <div class="toggle" id="updates.autoCheck-toggle" onclick="toggleSetting('updates.autoCheck')"></div>
+            <div class="toggle" id="updates.autoCheck-toggle" onclick="playNormalClick(); toggleSetting('updates.autoCheck')"></div>
           </div>
         </div>
 
@@ -1297,9 +1297,9 @@
           <div class="setting-row">
             <label>Actions</label>
             <div style="display: flex; gap: 6px;">
-              <button id="check-updates-btn" onclick="checkForUpdates()" class="skills-setup-btn" style="margin: 0;">Check Now</button>
-              <button id="download-update-btn" onclick="downloadUpdate()" class="skills-setup-btn" style="margin: 0; display: none;">Download</button>
-              <button id="install-update-btn" onclick="installUpdate()" class="skills-setup-btn" style="margin: 0; display: none; background: var(--accent); color: white; border-color: var(--accent);">Install & Restart</button>
+              <button id="check-updates-btn" onclick="playNormalClick(); checkForUpdates()" class="skills-setup-btn" style="margin: 0;">Check Now</button>
+              <button id="download-update-btn" onclick="playNormalClick(); downloadUpdate()" class="skills-setup-btn" style="margin: 0; display: none;">Download</button>
+              <button id="install-update-btn" onclick="playNormalClick(); installUpdate()" class="skills-setup-btn" style="margin: 0; display: none; background: var(--accent); color: white; border-color: var(--accent);">Install & Restart</button>
             </div>
           </div>
         </div>
@@ -1312,7 +1312,25 @@
     </main>
   </div>
 
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
   <script>
+    // Click sound
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    // Play click sound on any interactive element
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .tab, .nav-item, select')) {
+        playNormalClick();
+      }
+    });
+
     // State
     let settings = {};
     let pendingChanges = {};

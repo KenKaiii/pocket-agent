@@ -1,4 +1,4 @@
-import { app, Tray, Menu, nativeImage, BrowserWindow, ipcMain, Notification, globalShortcut, shell, dialog } from 'electron';
+import { app, Tray, Menu, nativeImage, BrowserWindow, ipcMain, Notification, globalShortcut, shell, dialog, screen } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { spawn, ChildProcess } from 'child_process';
@@ -157,6 +157,7 @@ let customizeWindow: BrowserWindow | null = null;
 let factsWindow: BrowserWindow | null = null;
 let soulWindow: BrowserWindow | null = null;
 let skillsSetupWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
 
 /**
  * Get the agent's isolated workspace directory.
@@ -472,6 +473,49 @@ function updateTrayMenu(): void {
   ]);
 
   tray.setContextMenu(contextMenu);
+}
+
+// ============ Splash Screen ============
+
+function showSplashScreen(): void {
+  console.log('[Main] Showing splash screen...');
+
+  // Get primary display for proper centering
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+  const splashWidth = 400;
+  const splashHeight = 160;
+
+  splashWindow = new BrowserWindow({
+    width: splashWidth,
+    height: splashHeight,
+    x: Math.round((screenWidth - splashWidth) / 2),
+    y: Math.round((screenHeight - splashHeight) / 2),
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  });
+
+  splashWindow.loadFile(path.join(__dirname, '../../ui/splash.html'));
+
+  splashWindow.on('closed', () => {
+    splashWindow = null;
+  });
+}
+
+function closeSplashScreen(): void {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+    splashWindow = null;
+  }
 }
 
 // ============ Windows ============
@@ -960,6 +1004,20 @@ function showNotification(title: string, body: string): void {
 // ============ IPC Handlers ============
 
 function setupIPC(): void {
+  // Splash screen completion
+  ipcMain.on('splash-complete', () => {
+    console.log('[Main] Splash complete, showing main app');
+    closeSplashScreen();
+
+    // Check for first run
+    if (SettingsManager.isFirstRun()) {
+      console.log('[Main] First run detected, showing setup wizard');
+      openSetupWindow();
+    } else {
+      openChatWindow();
+    }
+  });
+
   // Chat messages with status streaming
   ipcMain.handle('agent:send', async (event, message: string, sessionId?: string) => {
     console.log(`[IPC] agent:send received sessionId: ${sessionId}`);
@@ -1806,6 +1864,9 @@ app.whenReady().then(async () => {
   console.log('[Main] App ready, starting initialization...');
 
   try {
+    // Show splash screen immediately
+    showSplashScreen();
+
     // Set Dock icon on macOS
     if (process.platform === 'darwin') {
       const dockIconPath = path.join(__dirname, '../../assets/icon.png');
@@ -1855,15 +1916,10 @@ app.whenReady().then(async () => {
       console.warn(`[Main] Failed to register global shortcut ${shortcut}`);
     }
 
-    // Check for first run
-    if (SettingsManager.isFirstRun()) {
-      console.log('[Main] First run detected, showing setup wizard');
-      openSetupWindow();
-    } else {
+    // Initialize agent if not first run (window will be shown after splash completes)
+    if (!SettingsManager.isFirstRun()) {
       console.log('[Main] Initializing agent...');
       await initializeAgent();
-      // Open chat window on launch so users see the app
-      openChatWindow();
     }
 
     // Periodic tray update

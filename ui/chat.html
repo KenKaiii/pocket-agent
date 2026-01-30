@@ -972,7 +972,7 @@
       border-top: 1px solid var(--border);
       display: flex;
       gap: 12px;
-      align-items: flex-end;
+      align-items: center;
       flex-shrink: 0;
     }
 
@@ -1089,12 +1089,12 @@
       cursor: pointer;
       transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
       flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3), inset 0 -3px rgba(0, 0, 0, 0.2);
     }
 
     #send-btn:hover:not(:disabled) {
       transform: scale(1.08) rotate(-3deg);
-      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.45);
+      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.45), inset 0 -3px rgba(0, 0, 0, 0.2);
     }
 
     #send-btn:active:not(:disabled) {
@@ -1115,12 +1115,12 @@
     }
 
     #send-btn:hover:not(:disabled) svg {
-      transform: translateX(2px) translateY(-2px);
+      transform: scale(1.1);
     }
 
     #send-btn.stop-btn {
       background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3), inset 0 -3px rgba(0, 0, 0, 0.2);
     }
 
     #send-btn.stop-btn:hover {
@@ -1398,20 +1398,20 @@
     <div class="header-right">
       <div class="stats" id="stats"></div>
       <div class="hamburger-menu">
-        <button class="hamburger-btn" onclick="toggleMenu()" id="hamburger-btn">
+        <button class="hamburger-btn" onclick="playNormalClick(); toggleMenu()" id="hamburger-btn">
           <span></span>
           <span></span>
           <span></span>
         </button>
         <div class="menu-dropdown" id="menu-dropdown">
-          <button class="menu-item" onclick="clearChat(); closeMenu();">
+          <button class="menu-item" onclick="playNormalClick(); clearChat(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
               <path d="M3 3v5h5"/>
             </svg>
             Fresh Start
           </button>
-          <button class="menu-item" onclick="showFacts(); closeMenu();">
+          <button class="menu-item" onclick="playNormalClick(); showFacts(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2a10 10 0 1 0 10 10H12V2z"/>
               <path d="M12 2a10 10 0 0 1 10 10"/>
@@ -1420,13 +1420,13 @@
             </svg>
             My Brain
           </button>
-          <button class="menu-item" onclick="showSoul(); closeMenu();">
+          <button class="menu-item" onclick="playNormalClick(); showSoul(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
             My Approach
           </button>
-          <button class="menu-item" onclick="openFactsGraph(); closeMenu();">
+          <button class="menu-item" onclick="playNormalClick(); openFactsGraph(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="6" cy="6" r="3"/>
               <circle cx="18" cy="6" r="3"/>
@@ -1437,14 +1437,14 @@
             </svg>
             Mind Map
           </button>
-          <button class="menu-item" onclick="openCustomize(); closeMenu();">
+          <button class="menu-item" onclick="playNormalClick(); openCustomize(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 20h9"/>
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
             </svg>
             Personalize
           </button>
-          <button class="menu-item" onclick="openRoutines(); closeMenu();">
+          <button class="menu-item" onclick="playNormalClick(); openRoutines(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12 6 12 12 16 14"/>
@@ -1452,7 +1452,7 @@
             Routines
           </button>
           <div class="menu-divider"></div>
-          <button class="menu-item" onclick="openDocs(); closeMenu();">
+          <button class="menu-item" onclick="playNormalClick(); openDocs(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -1460,7 +1460,7 @@
             Docs
           </button>
           <div class="menu-divider"></div>
-          <button class="menu-item" onclick="openSettings(); closeMenu();">
+          <button class="menu-item" onclick="playNormalClick(); openSettings(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -1474,14 +1474,14 @@
 
   <div class="tabs-container" id="tabs-container">
     <!-- Tabs will be populated by JavaScript -->
-    <button class="new-tab-btn" onclick="createNewSession()" title="New chat">+</button>
+    <button class="new-tab-btn" onclick="playNormalClick(); createNewSession()" title="New chat">+</button>
   </div>
 
   <div id="messages"></div>
 
   <div id="input-area">
     <div class="input-container">
-      <button class="attach-btn" onclick="triggerAttach()" title="Drop a file">
+      <button class="attach-btn" onclick="playNormalClick(); triggerAttach()" title="Drop a file">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
         </svg>
@@ -1490,17 +1490,22 @@
         <div id="ghost-suggestion"></div>
         <textarea
           id="message-input"
-          placeholder="what's on your mind? ✨"
+          placeholder="what's on your mind? 🐱"
           rows="1"
           onkeydown="handleKeydown(event)"
           oninput="handleInput(event)"
         ></textarea>
       </div>
     </div>
-    <button id="send-btn" onclick="handleSendClick()" title="Send it!">
-      <svg class="send-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="22" y1="2" x2="11" y2="13"/>
-        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+    <button id="send-btn" onclick="handleSendClick()" title="Pounce! 🐾">
+      <svg class="send-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <!-- Paw pad (main) -->
+        <ellipse cx="12" cy="14" rx="5" ry="4.5"/>
+        <!-- Toe beans -->
+        <ellipse cx="7" cy="8" rx="2" ry="2.5"/>
+        <ellipse cx="17" cy="8" rx="2" ry="2.5"/>
+        <ellipse cx="10" cy="5.5" rx="1.8" ry="2.2"/>
+        <ellipse cx="14" cy="5.5" rx="1.8" ry="2.2"/>
       </svg>
       <svg class="stop-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
         <rect x="6" y="6" width="12" height="12" rx="2"/>
@@ -1510,6 +1515,10 @@
 
   <input type="file" id="file-input" onchange="handleFileSelect(event)" multiple
     accept=".txt,.md,.json,.csv,.xml,.html,.htm,.css,.js,.ts,.jsx,.tsx,.py,.rb,.go,.rs,.java,.c,.cpp,.h,.hpp,.sh,.yaml,.yml,.toml,.ini,.cfg,.conf,.log,.sql,.graphql,.pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.bmp,.ico">
+
+  <!-- Click Sounds -->
+  <audio id="click-sound" preload="auto" src="../assets/click.mp3"></audio>
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
 
   <!-- Drag and Drop Overlay -->
   <div id="drag-overlay" class="drag-overlay">
@@ -1532,12 +1541,30 @@
     const fileInput = document.getElementById('file-input');
 
     let isLoadingBySession = new Map(); // Track loading state per session
-    let pendingAttachments = []; // { file, name, type, size, dataUrl, content }
+    let pendingAttachmentsBySession = new Map(); // Track attachments per session
     let statusCleanupBySession = new Map(); // Track status listeners per session
     let statusElBySession = new Map(); // Track status elements per session
-    let currentSuggestion = null; // Stores the suggested prompt from the agent
+    let suggestionBySession = new Map(); // Track ghost suggestions per session
+    let inputTextBySession = new Map(); // Track input text per session
+    let queuedMessageIdsBySession = new Map(); // Track queued message IDs per session
+    let pendingUserMessagesBySession = new Map(); // Track pending user message content per session
     const ghostSuggestion = document.getElementById('ghost-suggestion');
     let queuedMessageElements = new Map(); // Track queued message DOM elements by a unique ID
+
+    // Helper to get current session's pending attachments
+    function getPendingAttachments() {
+      return pendingAttachmentsBySession.get(currentSessionId) || [];
+    }
+    function setPendingAttachments(attachments) {
+      pendingAttachmentsBySession.set(currentSessionId, attachments);
+    }
+    // Helper to get current session's suggestion
+    function getCurrentSuggestion() {
+      return suggestionBySession.get(currentSessionId) || null;
+    }
+    function setCurrentSuggestion(suggestion) {
+      suggestionBySession.set(currentSessionId, suggestion);
+    }
 
     // Notification sound
     let notificationSound = null;
@@ -1559,6 +1586,24 @@
       if (soundEnabled && notificationSound) {
         notificationSound.currentTime = 0;
         notificationSound.play().catch(() => {});
+      }
+    }
+
+    // Click sounds
+    const clickSound = document.getElementById('click-sound');
+    const normalClickSound = document.getElementById('normal-click-sound');
+
+    function playSendClick() {
+      if (soundEnabled && clickSound) {
+        clickSound.currentTime = 0;
+        clickSound.play().catch(() => {});
+      }
+    }
+
+    function playNormalClick() {
+      if (soundEnabled && normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
       }
     }
 
@@ -1660,6 +1705,7 @@
 
         tab.onclick = (e) => {
           if (!e.target.closest('.tab-close') && !e.target.closest('.tab-name-input')) {
+            playNormalClick();
             switchSession(session.id);
           }
         };
@@ -1727,6 +1773,7 @@
           closeBtn.innerHTML = '×';
           closeBtn.onclick = (e) => {
             e.stopPropagation();
+            playNormalClick();
             confirmDeleteSession(session.id, session.name);
           };
           tab.appendChild(closeBtn);
@@ -1762,13 +1809,65 @@
     async function switchSession(sessionId) {
       if (sessionId === currentSessionId) return;
 
+      // Save current session state before switching
+      inputTextBySession.set(currentSessionId, input.value);
+
+      // Switch to new session
       currentSessionId = sessionId;
       renderTabs();
       messagesDiv.innerHTML = '';
       await loadHistory();
+
+      // Restore pending user messages that haven't been saved to history yet
+      const pendingMsgs = pendingUserMessagesBySession.get(sessionId);
+      if (pendingMsgs && pendingMsgs.size > 0) {
+        pendingMsgs.forEach((msgData, msgId) => {
+          const userMsgEl = addMessage('user', msgData.content, true, msgData.attachments);
+          userMsgEl.dataset.messageId = msgId;
+          // Check if this was a queued message
+          const queuedIds = queuedMessageIdsBySession.get(sessionId) || new Set();
+          if (queuedIds.has(msgId)) {
+            userMsgEl.classList.add('queued');
+            queuedMessageElements.set(msgId, userMsgEl);
+          }
+        });
+      }
+
       updateStats();
+
+      // Restore input text for this session
+      input.value = inputTextBySession.get(sessionId) || '';
+      // Auto-resize input to match content
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+
+      // Restore ghost suggestion for this session
+      const savedSuggestion = getCurrentSuggestion();
+      if (savedSuggestion) {
+        ghostSuggestion.innerHTML = escapeHtml(savedSuggestion) + '<span class="tab-hint">Tab to accept</span>';
+        ghostSuggestion.style.display = 'block';
+      } else {
+        ghostSuggestion.innerHTML = '';
+        ghostSuggestion.style.display = 'none';
+      }
+
+      // Restore attachment previews for this session
+      renderAttachmentPreviews();
+
       // Update button state based on whether THIS session is loading
-      setButtonState(isLoadingBySession.get(sessionId) || false);
+      const isLoading = isLoadingBySession.get(sessionId) || false;
+      setButtonState(isLoading);
+
+      // Restore status indicator if this session has an active query
+      if (isLoading) {
+        // Create a new status indicator for this session
+        const existingStatusEl = statusElBySession.get(sessionId);
+        if (!existingStatusEl || !messagesDiv.contains(existingStatusEl)) {
+          const statusEl = addStatusIndicator('*stretches paws* thinking...');
+          statusElBySession.set(sessionId, statusEl);
+        }
+      }
+
       input.focus();
     }
 
@@ -2057,6 +2156,7 @@
     }
 
     function handleSendClick() {
+      playSendClick();
       if (isLoadingBySession.get(currentSessionId)) {
         stopQuery();
       } else {
@@ -2106,7 +2206,7 @@
         queuedMsgs.forEach(msg => msg.classList.remove('queued'));
         queuedMessageElements.clear();
 
-        addMessage('system', 'Query stopped.');
+        addMessage('system', 'query stopped', true, [], null, false);
 
         isLoadingBySession.set(sessionId, false);
         renderTabs(); // Update tab loading indicator
@@ -2120,7 +2220,7 @@
 
     async function sendMessage() {
       const message = input.value.trim();
-      const attachments = [...pendingAttachments];
+      const attachments = [...getPendingAttachments()];
       const sessionId = currentSessionId; // Capture session at start
 
       if (!message && attachments.length === 0) return;
@@ -2141,10 +2241,23 @@
 
       // Show user message - mark as queued if there's already a message processing
       const userMsgEl = addMessage('user', message, true, attachments);
+      userMsgEl.dataset.messageId = messageId;
+
+      // Track pending user message for session state restoration
+      if (!pendingUserMessagesBySession.has(sessionId)) {
+        pendingUserMessagesBySession.set(sessionId, new Map());
+      }
+      pendingUserMessagesBySession.get(sessionId).set(messageId, { content: message, attachments: attachments });
+
       if (isQueued) {
         userMsgEl.classList.add('queued');
         userMsgEl.dataset.messageId = messageId;
         queuedMessageElements.set(messageId, userMsgEl);
+        // Track queued message ID for session state restoration
+        if (!queuedMessageIdsBySession.has(sessionId)) {
+          queuedMessageIdsBySession.set(sessionId, new Set());
+        }
+        queuedMessageIdsBySession.get(sessionId).add(messageId);
       }
 
       // If not already processing, show status indicator and set loading state
@@ -2152,7 +2265,7 @@
         isLoadingBySession.set(sessionId, true);
         renderTabs();
         setButtonState(true);
-        const statusEl = addStatusIndicator('*stretches paws* thinking... 🐱');
+        const statusEl = addStatusIndicator('*stretches paws* thinking...');
         statusElBySession.set(sessionId, statusEl);
       }
 
@@ -2183,7 +2296,14 @@
             msgEl.classList.remove('queued');
           }
           queuedMessageElements.delete(messageId);
+          // Remove from session tracking
+          const queuedIds = queuedMessageIdsBySession.get(sessionId);
+          if (queuedIds) queuedIds.delete(messageId);
         }
+
+        // Remove from pending user messages (message is now saved to history)
+        const pendingMsgs = pendingUserMessagesBySession.get(sessionId);
+        if (pendingMsgs) pendingMsgs.delete(messageId);
 
         // Only update UI if still on same session
         if (currentSessionId === sessionId) {
@@ -2218,7 +2338,11 @@
               setSuggestion(result.suggestedPrompt);
             }
           } else {
-            addMessage('error', result.error);
+            // Don't show stop/abort related errors - they're already handled
+            const errorMsg = result.error || '';
+            if (!errorMsg.includes('stopped') && !errorMsg.includes('aborted') && !errorMsg.includes('Aborted')) {
+              addMessage('error', errorMsg);
+            }
           }
 
           updateStats();
@@ -2232,7 +2356,14 @@
             msgEl.classList.remove('queued');
           }
           queuedMessageElements.delete(messageId);
+          // Remove from session tracking
+          const queuedIds = queuedMessageIdsBySession.get(sessionId);
+          if (queuedIds) queuedIds.delete(messageId);
         }
+
+        // Remove from pending user messages (message is now saved to history)
+        const pendingMsgsErr = pendingUserMessagesBySession.get(sessionId);
+        if (pendingMsgsErr) pendingMsgsErr.delete(messageId);
 
         // Check if there are more queued messages
         const hasMoreQueued = queuedMessageElements.size > 0;
@@ -2256,8 +2387,8 @@
           setButtonState(false);
         }
 
-        // Only show error if still on same session and not stopped/cleared
-        if (currentSessionId === sessionId && !err.message?.includes('stopped') && !err.message?.includes('cleared')) {
+        // Only show error if still on same session and not stopped/cleared/aborted
+        if (currentSessionId === sessionId && !err.message?.includes('stopped') && !err.message?.includes('cleared') && !err.message?.includes('aborted') && !err.message?.includes('Aborted')) {
           addMessage('error', err.message || 'Something went wrong');
         }
 
@@ -2336,7 +2467,7 @@
       }
     }
 
-    function addMessage(role, content, animate = true, attachments = [], timestamp = null) {
+    function addMessage(role, content, animate = true, attachments = [], timestamp = null, showTimestamp = true) {
       const div = document.createElement('div');
       div.className = `message ${role}`;
       if (!animate) div.style.animation = 'none';
@@ -2375,12 +2506,14 @@
         }
       }
 
-      // Add timestamp
-      const ts = timestamp ? parseSqliteTimestamp(timestamp) : new Date();
-      const timestampDiv = document.createElement('div');
-      timestampDiv.className = 'message-timestamp';
-      timestampDiv.textContent = formatTimestamp(ts);
-      div.appendChild(timestampDiv);
+      // Add timestamp (unless explicitly disabled)
+      if (showTimestamp) {
+        const ts = timestamp ? parseSqliteTimestamp(timestamp) : new Date();
+        const timestampDiv = document.createElement('div');
+        timestampDiv.className = 'message-timestamp';
+        timestampDiv.textContent = formatTimestamp(ts);
+        div.appendChild(timestampDiv);
+      }
 
       // Insert before status indicator if one exists (keeps indicator at bottom)
       const statusIndicator = messagesDiv.querySelector('.status-indicator');
@@ -2483,12 +2616,12 @@
       const detailEl = statusEl.querySelector('.status-detail');
 
       if (status.type === 'thinking') {
-        actionEl.textContent = status.message || '*stretches paws* thinking... 🐱';
+        actionEl.textContent = status.message || '*stretches paws* thinking...';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
         statusEl.classList.remove('subagent-active');
       } else if (status.type === 'tool_start') {
-        actionEl.textContent = status.toolName || 'pouncing on it... 🐾';
+        actionEl.textContent = status.toolName || 'pouncing on it...';
         if (status.toolInput) {
           detailEl.textContent = status.toolInput;
           detailEl.title = status.toolInput;
@@ -2499,14 +2632,14 @@
         }
         statusEl.classList.remove('subagent-active');
       } else if (status.type === 'tool_end') {
-        actionEl.textContent = status.message || 'caught it! processing... 😺';
+        actionEl.textContent = status.message || 'caught it! processing...';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
         statusEl.classList.remove('subagent-active');
       } else if (status.type === 'subagent_start') {
         // Subagent spawned - show special status
         statusEl.classList.add('subagent-active');
-        actionEl.textContent = status.message || 'summoning cat friends 🐱🐱';
+        actionEl.textContent = status.message || 'summoning cat friends';
         if (status.toolInput) {
           const countBadge = status.agentCount > 1 ? ` (${status.agentCount} active)` : '';
           detailEl.textContent = status.toolInput + countBadge;
@@ -2518,7 +2651,7 @@
         }
       } else if (status.type === 'subagent_update') {
         // Multiple subagents, one finished
-        actionEl.textContent = status.message || `${status.agentCount} kitties on the job 🐾`;
+        actionEl.textContent = status.message || `${status.agentCount} kitties on the job`;
         detailEl.textContent = '';
         detailEl.style.display = 'none';
       } else if (status.type === 'subagent_end') {
@@ -2545,7 +2678,7 @@
         statusEl.classList.remove('subagent-active');
       } else if (status.type === 'queue_processing') {
         // Now processing a queued message
-        actionEl.textContent = status.message || 'digging it up now... 🐾';
+        actionEl.textContent = status.message || 'digging it up now...';
         if (status.queuedMessage) {
           detailEl.textContent = status.queuedMessage;
           detailEl.title = status.queuedMessage;
@@ -2596,7 +2729,7 @@
 
     function handleKeydown(e) {
       // Tab: Accept the suggestion and place cursor at end
-      if (e.key === 'Tab' && currentSuggestion && !input.value.trim()) {
+      if (e.key === 'Tab' && getCurrentSuggestion() && !input.value.trim()) {
         e.preventDefault();
         acceptSuggestion();
         return;
@@ -2606,8 +2739,8 @@
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         // If there's a suggestion and no user input, send the suggestion
-        if (currentSuggestion && !input.value.trim()) {
-          input.value = currentSuggestion;
+        if (getCurrentSuggestion() && !input.value.trim()) {
+          input.value = getCurrentSuggestion();
           clearSuggestion();
         }
         sendMessage();
@@ -2615,7 +2748,7 @@
       }
 
       // Escape: Clear the suggestion
-      if (e.key === 'Escape' && currentSuggestion) {
+      if (e.key === 'Escape' && getCurrentSuggestion()) {
         e.preventDefault();
         clearSuggestion();
         return;
@@ -2624,7 +2757,7 @@
 
     function handleInput(e) {
       // When user types, clear the suggestion
-      if (currentSuggestion && input.value.trim()) {
+      if (getCurrentSuggestion() && input.value.trim()) {
         clearSuggestion();
       }
       autoResizeTextarea();
@@ -2635,22 +2768,22 @@
         clearSuggestion();
         return;
       }
-      currentSuggestion = text;
+      setCurrentSuggestion(text);
       ghostSuggestion.innerHTML = escapeHtml(text) + '<span class="tab-hint">Tab to accept</span>';
       ghostSuggestion.style.display = 'block';
       input.classList.add('has-suggestion');
     }
 
     function clearSuggestion() {
-      currentSuggestion = null;
+      setCurrentSuggestion(null);
       ghostSuggestion.innerHTML = '';
       ghostSuggestion.style.display = 'none';
       input.classList.remove('has-suggestion');
     }
 
     function acceptSuggestion() {
-      if (!currentSuggestion) return;
-      input.value = currentSuggestion;
+      if (!getCurrentSuggestion()) return;
+      input.value = getCurrentSuggestion();
       clearSuggestion();
       autoResizeTextarea();
       // Place cursor at the end
@@ -2683,7 +2816,9 @@
 
         try {
           const attachment = await readFile(file, ext);
-          pendingAttachments.push(attachment);
+          const currentAttachments = getPendingAttachments();
+          currentAttachments.push(attachment);
+          setPendingAttachments(currentAttachments);
         } catch (err) {
           addMessage('system', `Failed to read file: ${file.name}`);
         }
@@ -2736,13 +2871,14 @@
       const existing = document.querySelector('.attachments-container');
       if (existing) existing.remove();
 
-      if (pendingAttachments.length === 0) return;
+      const attachments = getPendingAttachments();
+      if (attachments.length === 0) return;
 
       // Create container
       const container = document.createElement('div');
       container.className = 'attachments-container';
 
-      pendingAttachments.forEach((att, index) => {
+      attachments.forEach((att, index) => {
         const preview = document.createElement('div');
         preview.className = 'attachment-preview';
 
@@ -2755,7 +2891,7 @@
               <div class="attachment-name">${escapeHtml(att.name)}</div>
               <div class="attachment-size">${formatFileSize(att.size)}</div>
             </div>
-            <button class="attachment-remove" onclick="removeAttachment(${index})">×</button>
+            <button class="attachment-remove" onclick="playNormalClick(); removeAttachment(${index})">×</button>
           `;
           preview.insertBefore(img, preview.firstChild);
         } else {
@@ -2765,7 +2901,7 @@
               <div class="attachment-name">${escapeHtml(att.name)}</div>
               <div class="attachment-size">${formatFileSize(att.size)}</div>
             </div>
-            <button class="attachment-remove" onclick="removeAttachment(${index})">×</button>
+            <button class="attachment-remove" onclick="playNormalClick(); removeAttachment(${index})">×</button>
           `;
         }
 
@@ -2778,7 +2914,9 @@
     }
 
     function removeAttachment(index) {
-      pendingAttachments.splice(index, 1);
+      const attachments = getPendingAttachments();
+      attachments.splice(index, 1);
+      setPendingAttachments(attachments);
       renderAttachmentPreviews();
     }
 
@@ -2789,7 +2927,7 @@
     }
 
     function clearAttachments() {
-      pendingAttachments = [];
+      setPendingAttachments([]);
       renderAttachmentPreviews();
     }
 
@@ -2859,7 +2997,9 @@
 
         try {
           const attachment = await readFile(file, ext);
-          pendingAttachments.push(attachment);
+          const currentAttachments = getPendingAttachments();
+          currentAttachments.push(attachment);
+          setPendingAttachments(currentAttachments);
         } catch (err) {
           addMessage('system', `Failed to read file: ${file.name}`);
         }

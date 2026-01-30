@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Pocket Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-app-region: drag;
+    }
+
+    .splash-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 36px;
+      background: rgba(20, 20, 25, 0.95);
+      border-radius: 16px;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      filter: invert(1) brightness(2);
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    .logo-text {
+      font-family: 'Pixelify Sans', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: white;
+      letter-spacing: 0.5px;
+      position: relative;
+      white-space: nowrap;
+      background: linear-gradient(
+        90deg,
+        #ffffff 0%,
+        #ffffff 40%,
+        #e0b0ff 50%,
+        #ffffff 60%,
+        #ffffff 100%
+      );
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 2s ease-in-out;
+    }
+
+    .logo-icon-wrapper {
+      position: relative;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 100% 0;
+      }
+      50% {
+        background-position: -100% 0;
+      }
+      100% {
+        background-position: -100% 0;
+      }
+    }
+
+    .fade-out {
+      animation: fadeOut 0.3s ease-out forwards;
+    }
+
+    @keyframes fadeOut {
+      from {
+        opacity: 1;
+        transform: scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="splash-container" id="splash">
+    <div class="logo-row">
+      <div class="logo-icon-wrapper">
+        <img src="../assets/tray-icon@2x.png" alt="" class="logo-icon">
+      </div>
+      <span class="logo-text">Pocket Agent</span>
+    </div>
+  </div>
+
+  <audio id="sparkle" preload="auto">
+    <source src="../assets/sparkle.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    // Play sound and notify main process when done
+    window.addEventListener('DOMContentLoaded', () => {
+      const audio = document.getElementById('sparkle');
+      const splash = document.getElementById('splash');
+
+      // Play the sparkle sound
+      audio.play().catch(err => {
+        console.log('Audio play failed:', err);
+      });
+
+      // When audio ends, fade out and close
+      audio.addEventListener('ended', () => {
+        splash.classList.add('fade-out');
+        setTimeout(() => {
+          ipcRenderer.send('splash-complete');
+        }, 300); // Wait for fade animation
+      });
+
+      // Fallback in case audio doesn't play
+      setTimeout(() => {
+        if (!splash.classList.contains('fade-out')) {
+          splash.classList.add('fade-out');
+          setTimeout(() => {
+            ipcRenderer.send('splash-complete');
+          }, 300);
+        }
+      }, 2500); // Slightly longer than audio duration as fallback
+    });
+  </script>
+</body>
+</html>

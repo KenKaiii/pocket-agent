@@ -8,7 +8,34 @@
       "os": [],
       "install": [
         {"id": "brew", "kind": "brew", "formula": "1password-cli", "bins": ["op"], "label": "Install 1Password CLI (brew)"}
-      ]
+      ],
+      "setup": {
+        "type": "cli",
+        "title": "1Password CLI",
+        "steps": [
+          {
+            "id": "check-app",
+            "title": "Check Desktop App",
+            "description": "Make sure 1Password desktop app is installed and you're signed in. The CLI integrates with the desktop app for authentication.",
+            "action": "info"
+          },
+          {
+            "id": "signin",
+            "title": "Sign In",
+            "description": "Sign in to 1Password CLI (this will open a browser window for authentication)",
+            "action": "cli_interactive",
+            "command": "op signin"
+          },
+          {
+            "id": "verify",
+            "title": "Verify",
+            "description": "Checking connection...",
+            "action": "cli_command",
+            "command": "op account list",
+            "verify": true
+          }
+        ]
+      }
     },
     "apple-notes": {
       "bins": ["memo"],
@@ -31,7 +58,8 @@
       "os": ["darwin"],
       "install": [
         {"id": "go", "kind": "go", "module": "github.com/tylerwince/grizzly/cmd/grizzly@latest", "bins": ["grizzly"], "label": "Install grizzly (go)"}
-      ]
+      ],
+      "requires_permissions": ["full-disk-access"]
     },
     "bird": {
       "bins": ["bird"],
@@ -83,7 +111,34 @@
       "os": [],
       "install": [
         {"id": "brew", "kind": "brew", "formula": "gemini-cli", "bins": ["gemini"], "label": "Install Gemini CLI (brew)"}
-      ]
+      ],
+      "setup": {
+        "type": "cli",
+        "title": "Gemini CLI",
+        "steps": [
+          {
+            "id": "info",
+            "title": "Google Account Required",
+            "description": "You'll need a Google account to use Gemini CLI. The login will open in your browser.",
+            "action": "info"
+          },
+          {
+            "id": "login",
+            "title": "Sign In",
+            "description": "Sign in with your Google account (this will open a browser window)",
+            "action": "cli_interactive",
+            "command": "gemini"
+          },
+          {
+            "id": "verify",
+            "title": "Verify",
+            "description": "Checking connection...",
+            "action": "cli_command",
+            "command": "gemini --list-extensions",
+            "verify": true
+          }
+        ]
+      }
     },
     "gifgrep": {
       "bins": ["gifgrep"],
@@ -152,7 +207,37 @@
       "os": [],
       "install": [
         {"id": "brew", "kind": "brew", "formula": "himalaya", "bins": ["himalaya"], "label": "Install Himalaya (brew)"}
-      ]
+      ],
+      "setup": {
+        "type": "config",
+        "title": "Email (IMAP/SMTP)",
+        "steps": [
+          {
+            "id": "info",
+            "title": "Email Account Setup",
+            "description": "You'll need your email provider's IMAP and SMTP server settings. For Gmail, you'll need an App Password (not your regular password).",
+            "action": "info"
+          },
+          {
+            "id": "configure",
+            "title": "Configure Account",
+            "description": "Set up your email account with Himalaya",
+            "action": "cli_command",
+            "command": "himalaya account configure {{account_name}}",
+            "inputs": [
+              {"id": "account_name", "label": "Account Name", "placeholder": "personal"}
+            ]
+          },
+          {
+            "id": "verify",
+            "title": "Verify",
+            "description": "Testing email connection...",
+            "action": "cli_command",
+            "command": "himalaya envelope list --account {{account_name}} --folder INBOX --page-size 1",
+            "verify": true
+          }
+        ]
+      }
     },
     "imsg": {
       "bins": ["imsg"],
@@ -203,7 +288,28 @@
       "bins": [],
       "os": [],
       "install": [],
-      "requires_env": ["NOTION_API_KEY"]
+      "requires_env": ["NOTION_API_KEY"],
+      "setup": {
+        "type": "api_key",
+        "title": "Notion API",
+        "steps": [
+          {
+            "id": "create-integration",
+            "title": "Create Integration",
+            "description": "Go to notion.so/my-integrations, create a new integration, and copy the Internal Integration Secret. You can add the key using the 'Add Key' button on this page.",
+            "action": "info",
+            "helpUrl": "https://www.notion.so/my-integrations"
+          },
+          {
+            "id": "verify",
+            "title": "Verify",
+            "description": "Testing Notion API connection...",
+            "action": "cli_command",
+            "command": "curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer '\"$NOTION_API_KEY\" -H 'Notion-Version: 2022-06-28' https://api.notion.com/v1/users/me",
+            "verify": true
+          }
+        ]
+      }
     },
     "obsidian": {
       "bins": ["obsidian-cli"],
@@ -299,14 +405,6 @@
       ],
       "requires_env": ["ELEVENLABS_API_KEY"]
     },
-    "session-logs": {
-      "bins": ["jq", "rg"],
-      "os": [],
-      "install": [
-        {"id": "brew-jq", "kind": "brew", "formula": "jq", "bins": ["jq"], "label": "Install jq (brew)"},
-        {"id": "brew-rg", "kind": "brew", "formula": "ripgrep", "bins": ["rg"], "label": "Install ripgrep (brew)"}
-      ]
-    },
     "sherpa-onnx-tts": {
       "bins": [],
       "os": ["darwin", "linux", "win32"],
@@ -397,7 +495,35 @@
       "install": [
         {"id": "brew", "kind": "brew", "formula": "jq", "bins": ["jq"], "label": "Install jq (brew)"}
       ],
-      "requires_env": ["TRELLO_API_KEY", "TRELLO_TOKEN"]
+      "requires_env": ["TRELLO_API_KEY", "TRELLO_TOKEN"],
+      "setup": {
+        "type": "api_key",
+        "title": "Trello API",
+        "steps": [
+          {
+            "id": "get-api-key",
+            "title": "Get API Key",
+            "description": "Go to trello.com/power-ups/admin, click 'New' to create a Power-Up, then copy your API Key.",
+            "action": "info",
+            "helpUrl": "https://trello.com/power-ups/admin"
+          },
+          {
+            "id": "get-token",
+            "title": "Get Token",
+            "description": "Click the link below to authorize and get your token. You'll enter both keys using the 'Add Key' button.",
+            "action": "info",
+            "helpUrl": "https://trello.com/1/authorize?expiration=never&scope=read,write&response_type=token&key=YOUR_API_KEY"
+          },
+          {
+            "id": "verify",
+            "title": "Verify",
+            "description": "Testing Trello API connection...",
+            "action": "cli_command",
+            "command": "curl -s -o /dev/null -w '%{http_code}' \"https://api.trello.com/1/members/me?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN\"",
+            "verify": true
+          }
+        ]
+      }
     },
     "video-frames": {
       "bins": ["ffmpeg"],

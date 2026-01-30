@@ -523,7 +523,7 @@
       <h1>Mind Map</h1>
       <div class="stats" id="stats"></div>
     </div>
-    <button class="header-btn" onclick="window.close()">Done</button>
+    <button class="header-btn" onclick="playNormalClick(); window.close()">Done</button>
   </header>
 
   <div class="toolbar">
@@ -532,8 +532,8 @@
       <option value="all">All Categories</option>
     </select>
 
-    <button onclick="resetZoom()">Reset</button>
-    <button onclick="loadGraphData()">Refresh</button>
+    <button onclick="playNormalClick(); resetZoom()">Reset</button>
+    <button onclick="playNormalClick(); loadGraphData()">Refresh</button>
 
     <div class="spacer"></div>
 
@@ -656,7 +656,24 @@
     <div class="hint" id="hint">Double-click node to focus</div>
   </div>
 
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
   <script>
+    // Click sound
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .tab, .legend-item')) {
+        playNormalClick();
+      }
+    });
+
     // Category colors
     const CATEGORY_COLORS = {
       user_info: '#a855f7',
@@ -1269,7 +1286,7 @@
       panel.innerHTML = `
         <div class="detail-header">
           <div class="detail-category" style="background: ${color}20; color: ${color}">${d.category}</div>
-          <button class="detail-close" onclick="hideDetail()">&times;</button>
+          <button class="detail-close" onclick="playNormalClick(); hideDetail()">&times;</button>
         </div>
         <div class="detail-subject">${escapeHtml(d.subject)}</div>
         <div class="detail-content">${escapeHtml(d.content)}</div>
