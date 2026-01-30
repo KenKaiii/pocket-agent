@@ -237,6 +237,18 @@ export class TelegramBot extends BaseChannel {
     const allowedUsers = SettingsManager.getArray('telegram.allowedUserIds');
     this.bot = new Bot(botToken);
     this.allowedUserIds = new Set(allowedUsers.map(id => parseInt(id, 10)).filter(id => !isNaN(id)));
+
+    // Security: Require at least one allowed user ID
+    if (this.allowedUserIds.size === 0) {
+      throw new Error(
+        'Telegram allowlist is empty. For security, you must add at least one user ID.\n\n' +
+        'To get your Telegram user ID:\n' +
+        '1. Open Telegram and message @userinfobot\n' +
+        '2. It will reply with your user ID\n' +
+        '3. Add that ID to Settings → Telegram → Allowed User IDs'
+      );
+    }
+
     this.loadPersistedChatIds();
     this.setupHandlers();
   }
@@ -288,13 +300,20 @@ export class TelegramBot extends BaseChannel {
         }
       }
 
-      // If allowlist is configured, enforce it
-      if (this.allowedUserIds.size > 0) {
-        if (!userId || !this.allowedUserIds.has(userId)) {
-          console.log(`[Telegram] Unauthorized user: ${userId}`);
-          await ctx.reply('Sorry, you are not authorized to use this bot.');
-          return;
-        }
+      // Security: Always enforce allowlist - check current settings on every message
+      // (not cached, so changes take effect immediately without restart)
+      const currentAllowedUsers = SettingsManager.getArray('telegram.allowedUserIds')
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id));
+
+      if (currentAllowedUsers.length === 0 || !userId || !currentAllowedUsers.includes(userId)) {
+        console.log(`[Telegram] Unauthorized user attempted access: ${userId}`);
+        await ctx.reply(
+          '🔒 Sorry, you are not authorized to use this bot.\n\n' +
+          'This is a personal AI assistant. If you are the owner, ' +
+          'add your Telegram user ID to the allowlist in Settings.'
+        );
+        return;
       }
 
       await next();
@@ -909,9 +928,7 @@ multiline</pre>
           this.isRunning = true;
           try {
             console.log(`[Telegram] Bot @${botInfo.username} started`);
-            console.log(`[Telegram] Allowlist: ${this.allowedUserIds.size > 0
-              ? Array.from(this.allowedUserIds).join(', ')
-              : 'disabled (all users allowed)'}`);
+            console.log(`[Telegram] Authorized users: ${Array.from(this.allowedUserIds).join(', ')}`);
           } catch {
             // Ignore EPIPE errors from console.log
           }
