@@ -223,6 +223,8 @@ export class MemoryManager {
         last_status TEXT CHECK(last_status IN ('ok', 'error', 'skipped')),
         last_error TEXT,
         last_duration_ms INTEGER,
+        job_type TEXT DEFAULT 'routine' CHECK(job_type IN ('routine', 'reminder')),
+        session_id TEXT REFERENCES sessions(id),
         created_at TEXT DEFAULT ((strftime('%Y-%m-%dT%H:%M:%fZ'))),
         updated_at TEXT DEFAULT ((strftime('%Y-%m-%dT%H:%M:%fZ')))
       );
@@ -455,6 +457,12 @@ export class MemoryManager {
         console.log(`[Memory] Migrated ${count} cron jobs to default session`);
       }
       console.log('[Memory] Migrated cron_jobs table: added session_id column');
+    }
+
+    // Add job_type column for distinguishing routines vs reminders
+    if (!hasColumn('cron_jobs', 'job_type')) {
+      this.db.exec(`ALTER TABLE cron_jobs ADD COLUMN job_type TEXT DEFAULT 'routine' CHECK(job_type IN ('routine', 'reminder'))`);
+      console.log('[Memory] Migrated cron_jobs table: added job_type column');
     }
 
     // Create indexes for session filtering

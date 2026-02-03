@@ -115,6 +115,7 @@
     "grammy": "^1.31.0",
     "node-cron": "^4.2.1",
     "openai": "^6.17.0",
+    "playwright": "^1.58.1",
     "puppeteer-core": "^24.36.1"
   },
   "devDependencies": {

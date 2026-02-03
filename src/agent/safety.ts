@@ -520,19 +520,17 @@ export function buildCanUseToolCallback(): (
   options: { signal: AbortSignal; toolUseID: string }
 ) => Promise<{ behavior: 'allow' } | { behavior: 'deny'; message: string; interrupt: boolean }> {
   return async (toolName, input) => {
-    console.log(`[Safety] canUseTool called for: ${toolName}`);
     const validation = validateToolCall(toolName, input);
 
     if (!validation.allowed) {
-      console.log(`[Safety] DENIED: ${validation.reason}`);
+      console.warn(`[Safety] ⛔ BLOCKED ${toolName}: ${validation.reason}`);
       return {
         behavior: 'deny',
         message: `🚫 Safety block: ${validation.reason}`,
-        interrupt: false, // Don't interrupt the entire session, just block this tool
+        interrupt: false,
       };
     }
 
-    console.log(`[Safety] ALLOWED: ${toolName}`);
     return { behavior: 'allow' };
   };
 }
@@ -572,27 +570,22 @@ export function buildPreToolUseHook(): {
   return {
     hooks: [
       async (input: { tool_name: string; tool_input: unknown }) => {
-        console.log(`[Safety] PreToolUse hook called for: ${input.tool_name}`);
         const validation = validateToolCall(
           input.tool_name,
           (input.tool_input as Record<string, unknown>) || {}
         );
 
         if (!validation.allowed) {
-          console.log(`[Safety] HOOK DENIED: ${validation.reason}`);
+          console.warn(`[Safety] ⛔ BLOCKED ${input.tool_name}: ${validation.reason}`);
 
           // Emit status for UI
-          console.log(`[Safety] statusEmitter available: ${!!statusEmitter}`);
           if (statusEmitter) {
-            console.log(`[Safety] Emitting tool_blocked status`);
             statusEmitter({
               type: 'tool_blocked',
               toolName: input.tool_name,
               message: '🙀 whoa! not allowed!',
               blockedReason: validation.reason || 'Dangerous operation blocked',
             });
-          } else {
-            console.log(`[Safety] WARNING: No status emitter set!`);
           }
 
           return {
@@ -604,7 +597,7 @@ export function buildPreToolUseHook(): {
           };
         }
 
-        console.log(`[Safety] HOOK ALLOWED: ${input.tool_name}`);
+        // Silent on allowed - only log blocks
         return {
           hookSpecificOutput: {
             hookEventName: 'PreToolUse' as const,

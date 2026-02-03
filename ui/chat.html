@@ -2045,6 +2045,7 @@
     let searchOpenBySession = new Map(); // Track search open state per session
     let queuedMessageIdsBySession = new Map(); // Track queued message IDs per session
     let pendingUserMessagesBySession = new Map(); // Track pending user message content per session
+    let streamingMsgElBySession = new Map(); // Track streaming message elements per session
     const ghostSuggestion = document.getElementById('ghost-suggestion');
     let queuedMessageElements = new Map(); // Track queued message DOM elements by a unique ID
 
@@ -2914,6 +2915,13 @@
           }
 
           if (result.success) {
+            // Remove streaming message if present (will be replaced with formatted version)
+            const streamingEl = streamingMsgElBySession.get(sessionId);
+            if (streamingEl) {
+              streamingEl.remove();
+              streamingMsgElBySession.delete(sessionId);
+            }
+
             addMessage('assistant', result.response);
 
             // If there's a suggested prompt, show it as ghost text
@@ -3333,8 +3341,33 @@
         if (queuedMsgs.length > 0) {
           queuedMsgs[0].classList.remove('queued');
         }
+      } else if (status.type === 'text_delta') {
+        // Streaming text - create or append to streaming message
+        let streamingEl = streamingMsgElBySession.get(targetSession);
+
+        if (status.isFirstChunk || !streamingEl) {
+          // Create new streaming message element
+          streamingEl = document.createElement('div');
+          streamingEl.className = 'message assistant streaming';
+          streamingEl.innerHTML = '<div class="streaming-content"></div>';
+          messagesDiv.appendChild(streamingEl);
+          streamingMsgElBySession.set(targetSession, streamingEl);
+        }
+
+        // Append the delta text
+        const contentEl = streamingEl.querySelector('.streaming-content');
+        if (contentEl && status.textDelta) {
+          contentEl.textContent += status.textDelta;
+        }
       } else if (status.type === 'done') {
-        // Response complete - play notification sound
+        // Response complete - finalize streaming message if any
+        const streamingEl = streamingMsgElBySession.get(targetSession);
+        if (streamingEl) {
+          streamingEl.classList.remove('streaming');
+          // Mark it so sendMessage knows not to add another message
+          streamingEl.dataset.streamingComplete = 'true';
+        }
+        // Play notification sound
         playNotificationSound();
       }
 
