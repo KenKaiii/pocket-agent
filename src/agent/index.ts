@@ -623,7 +623,12 @@ class AgentManagerClass extends EventEmitter {
 
     // Route by per-session mode (not global mode)
     const sessionMode = this.memory.getSessionMode(sessionId);
-    if (sessionMode === 'general' && this.chatEngine) {
+    // Non-Anthropic providers (GLM, Moonshot) use OpenAI-compatible APIs that the
+    // Claude Agent SDK can't speak. Route them through the ChatEngine regardless of
+    // session mode so they hit the correct /chat/completions endpoint.
+    const provider = getProviderForModel(this.model);
+    const useChatEngine = sessionMode === 'general' || provider !== 'anthropic';
+    if (useChatEngine && this.chatEngine) {
       const result = await this.chatEngine.processMessage(
         userMessage,
         channel,
@@ -1288,8 +1293,9 @@ class AgentManagerClass extends EventEmitter {
    * Also clears any queued messages for that session.
    */
   stopQuery(sessionId?: string, clearQueuedMessages: boolean = true): boolean {
-    // Delegate to Chat engine in General mode
-    if (this.mode === 'general' && this.chatEngine) {
+    // Delegate to Chat engine for general mode or non-Anthropic providers
+    const provider = getProviderForModel(this.model);
+    if ((this.mode === 'general' || provider !== 'anthropic') && this.chatEngine) {
       return this.chatEngine.stopQuery(sessionId);
     }
 
@@ -1367,8 +1373,9 @@ class AgentManagerClass extends EventEmitter {
    * Check if a query is currently processing (optionally for a specific session)
    */
   isQueryProcessing(sessionId?: string): boolean {
-    // Check Chat engine in General mode
-    if (this.mode === 'general' && this.chatEngine) {
+    // Check Chat engine for general mode or non-Anthropic providers
+    const provider = getProviderForModel(this.model);
+    if ((this.mode === 'general' || provider !== 'anthropic') && this.chatEngine) {
       return this.chatEngine.isQueryProcessing(sessionId);
     }
 

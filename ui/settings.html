@@ -1109,6 +1109,18 @@
               <button onclick="playNormalClick(); validateKey('glm')">Test</button>
             </div>
           </div>
+          <div class="key-row">
+            <div class="key-info">
+              <span class="key-name">Coding Plan</span>
+              <a href="https://z.ai/subscribe" target="_blank" class="key-link">subscribe</a>
+            </div>
+            <div class="key-input" style="justify-content: flex-start; gap: 8px;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-secondary);">
+                <input type="checkbox" id="glm.codingPlan" onchange="playNormalClick(); saveSetting('glm.codingPlan', this.checked ? 'true' : 'false')">
+                Use Coding Plan endpoint
+              </label>
+            </div>
+          </div>
         </div>
 
         <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Model Settings</h3>

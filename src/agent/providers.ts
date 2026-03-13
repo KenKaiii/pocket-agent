@@ -4,10 +4,23 @@
  * and general/chat mode (chat-providers.ts).
  */
 
+import { SettingsManager } from '../settings';
+
 export type ProviderType = 'anthropic' | 'moonshot' | 'glm';
 
 export interface ProviderConfig {
   baseUrl?: string;
+}
+
+// Z.AI GLM endpoints:
+// - Standard (pay-as-you-go): https://api.z.ai/api/paas/v4
+// - Coding Plan (subscription): https://api.z.ai/api/coding/paas/v4
+const GLM_STANDARD_URL = 'https://api.z.ai/api/paas/v4';
+const GLM_CODING_PLAN_URL = 'https://api.z.ai/api/coding/paas/v4';
+
+export function getGlmBaseUrl(): string {
+  const isCodingPlan = SettingsManager.getBoolean('glm.codingPlan');
+  return isCodingPlan ? GLM_CODING_PLAN_URL : GLM_STANDARD_URL;
 }
 
 export const PROVIDER_CONFIGS: Record<ProviderType, ProviderConfig> = {
@@ -18,7 +31,8 @@ export const PROVIDER_CONFIGS: Record<ProviderType, ProviderConfig> = {
     // No baseUrl = uses gg-ai default (https://api.moonshot.ai/v1)
   },
   glm: {
-    baseUrl: 'https://api.z.ai/api/paas/v4',
+    // baseUrl is dynamic — use getGlmBaseUrl() instead of config.baseUrl for GLM
+    baseUrl: GLM_STANDARD_URL,
   },
 };
 
