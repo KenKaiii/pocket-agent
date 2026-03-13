@@ -7,7 +7,7 @@
 
 import type { Provider } from '@kenkaiiii/gg-ai';
 import { SettingsManager } from '../settings';
-import { getProviderForModel, PROVIDER_CONFIGS } from './providers';
+import { getProviderForModel, PROVIDER_CONFIGS, getGlmBaseUrl } from './providers';
 
 export { getProviderForModel };
 
@@ -38,7 +38,7 @@ export async function getStreamConfig(model: string): Promise<StreamConfig> {
     if (!apiKey) {
       throw new Error('Z.AI GLM API key not configured. Please add your key in Settings > LLM.');
     }
-    return { provider: 'glm', apiKey, baseUrl: config.baseUrl };
+    return { provider: 'glm', apiKey, baseUrl: getGlmBaseUrl() };
   }
 
   // Anthropic provider

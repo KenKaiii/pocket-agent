@@ -104,6 +104,15 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     description: 'Your Z.AI API key for GLM models',
     type: 'password',
   },
+  {
+    key: 'glm.codingPlan',
+    defaultValue: 'false',
+    encrypted: false,
+    category: 'api_keys',
+    label: 'GLM Coding Plan',
+    description: 'Enable if you have a Z.AI GLM Coding Plan subscription (uses /api/coding/paas/v4 endpoint)',
+    type: 'boolean',
+  },
 
   // Agent settings
   {
