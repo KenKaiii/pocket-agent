@@ -78,6 +78,13 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: mac-build
+          # A handoff to the release job below, nothing more: once that job has
+          # attached these to the GitHub Release they are dead weight, and the
+          # release assets are stored separately. On the default 90-day
+          # retention nine of these builds accumulated 22 GB and exhausted the
+          # account's artifact storage quota, which silently blocked artifact
+          # uploads across every other repo.
+          retention-days: 1
           path: |
             release/*.dmg
             release/*.zip
@@ -107,6 +114,8 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: win-build
+          # Same handoff-only role as mac-build above; see that comment.
+          retention-days: 1
           path: |
             release/*-setup.exe
             release/*.zip
