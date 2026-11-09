@@ -12,12 +12,15 @@
   <a href="https://github.com/KenKaiii/pocket-agent/releases/latest"><img src="https://img.shields.io/github/v/release/KenKaiii/pocket-agent?include_prereleases&style=for-the-badge" alt="GitHub release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
   <a href="https://youtube.com/@kenkaidoesai"><img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube"></a>
-  <a href="https://skool.com/kenkai"><img src="https://img.shields.io/badge/Skool-Community-7C3AED?style=for-the-badge" alt="Skool"></a>
+  <a href="https://www.skool.com/raid"><img src="https://img.shields.io/badge/Skool-Free%20community-7C3AED?style=for-the-badge" alt="Free Skool community"></a>
 </p>
 
 **Pocket Agent** is a personal AI that lives in your menu bar 24/7. It remembers everything, learns who you are, and actually gets better at helping you over time.
 
 It's not just a chatbot. It extracts facts about you, runs automations while you sleep, manages your calendar and tasks, and evolves to work with *you specifically*. Talk to it from your desktop or Telegram. Set up routines that do stuff on your behalf. It's an assistant that's always there.
+
+> [!TIP]
+> **Want to build your own apps with AI?** A free 7-day build challenge and 20+ step-by-step projects are in my free community: **[skool.com/raid](https://www.skool.com/raid)**
 
 ---
 
@@ -167,7 +170,7 @@ Stack: Electron + Claude Agent SDK + SQLite + TypeScript
 ## 👥 Community
 
 - [YouTube @kenkaidoesai](https://youtube.com/@kenkaidoesai) - tutorials and demos
-- [Skool community](https://skool.com/kenkai) - come hang out
+- [Free Skool community](https://www.skool.com/raid): a 7-day build challenge and 20+ step-by-step projects
 
 ---
 
